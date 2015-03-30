@@ -4,14 +4,18 @@
  */
 package org.bluecipherz.certificatemaker;
 
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
@@ -30,6 +34,7 @@ public class Alert extends Stage {
         ERROR
     }
     
+    
     private static final ImageView infoImage = new ImageView();
     private static final ImageView warnImage = new ImageView();
     private static final ImageView errorImage = new ImageView();
@@ -46,9 +51,11 @@ public class Alert extends Stage {
         initModality(Modality.NONE);
         setTitle(title);
         
-        infoImage.setImage(new Image(this.getClass().getResourceAsStream("icons/infox32.png")));
-        warnImage.setImage(new Image(this.getClass().getResourceAsStream("icons/warnx32.png")));
-        errorImage.setImage(new Image(this.getClass().getResourceAsStream("icons/errorx32.png")));
+        infoImage.setImage(ResourceManger.getInstance().infox32);
+        warnImage.setImage(ResourceManger.getInstance().warnx32);
+        errorImage.setImage(ResourceManger.getInstance().errorx32);
+        
+        BorderPane borderPane = new BorderPane();
         
         HBox hbox = new HBox();
         hbox.setPadding(new Insets(10));
@@ -72,8 +79,21 @@ public class Alert extends Stage {
         HBox.setMargin(label, new Insets(15));
         
 //        GridPane.setHalignment(label, HPos.CENTER);
+        HBox hbox2 = new HBox();
+        Button okButton = new Button("OK");
+        okButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                close();
+            }
+        });
+        hbox2.getChildren().add(okButton);
+        hbox2.setAlignment(Pos.CENTER_RIGHT);
         
-        Scene scene = new Scene(hbox, Color.WHITE);
+        borderPane.setTop(hbox);
+        borderPane.setCenter(hbox2);
+        
+        Scene scene = new Scene(borderPane, Color.WHITE);
         setScene(scene);
         sizeToScene();
         show();
@@ -87,5 +107,17 @@ public class Alert extends Stage {
      */
     public static Alert showAlert(Stage primaryStage, String title, String message, AlertType alertType) {
         return new Alert(primaryStage, title, message, alertType);
+    }
+    
+    public static Alert showAlertInfo(Stage primaryStage, String title, String message) {
+        return new Alert(primaryStage, title, message, AlertType.INFO);
+    }
+    
+    public static Alert showAlertWarning(Stage primaryStage, String title, String message) {
+        return new Alert(primaryStage, title, message, AlertType.WARN);
+    }
+    
+    public static Alert showAlertError(Stage primaryStage, String title, String message) {
+        return new Alert(primaryStage, title, message, AlertType.ERROR);
     }
 }

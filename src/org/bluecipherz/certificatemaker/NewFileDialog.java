@@ -27,11 +27,11 @@ import javafx.stage.Stage;
 class NewFileDialog extends Stage {
     File imageFile;
     private FileChooser fileChooser;
-    private final Window newFileDialog;
+    private final Window window;
 
     public NewFileDialog(final Stage owner, String title, final Window newFileDialog) {
         super();
-        this.newFileDialog = newFileDialog;
+        this.window = newFileDialog;
         initOwner(owner);
         initModality(Modality.APPLICATION_MODAL);
         setOpacity(.90);
@@ -79,6 +79,7 @@ class NewFileDialog extends Stage {
                 if (!"".equalsIgnoreCase(fileName) && !"".equalsIgnoreCase(imagePath)) {
                     close();
                     CertificateWrapper certificateWrapper = newFileDialog.createCertificateWrapper(fileName, imagePath);
+//                    newFileDialog.createNewTab(certificateWrapper).setFile(new File(fileName)); // create new tab and save path for later saving
                     newFileDialog.createNewTab(certificateWrapper);
                     //                        createNewTab(fileName, imagePath);
                 } else {

@@ -8,6 +8,6 @@ package org.bluecipherz.certificatemaker;
  *
  * @author bazi
  */
-public class AdaptedCertificateField {
+public class SplashScreen {
     
 }

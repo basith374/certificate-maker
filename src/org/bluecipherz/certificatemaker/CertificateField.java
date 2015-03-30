@@ -1,69 +1,127 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package org.bluecipherz.certificatemaker;
 
-import javafx.beans.property.*;
+import java.util.List;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
- * Created by bazi on 23/3/15.
+ *
+ * @author bazi
  */
+@XmlJavaTypeAdapter(CertificateFieldAdapter.class)
 public class CertificateField {
-//    private final StringProperty fieldName;
-//    private final IntegerProperty x;
-//    private final IntegerProperty y;
-//    private final DoubleProperty fontSize;
-//    private final StringProperty fontFamily;
-//    private final BooleanProperty boldText;
-    private final String fieldName;
-    private final int x;
-    private final int y;
-    private final int fontSize;
-    private final String fontFamily;
-    private final boolean boldText;
 
-    public String text;
+    private int x;
+    private int y;
+    private FieldType fieldType;
+    private String fieldName;
+    private int fontSize;
+    private String fontFamily;
+    private int fontStyle; // depending on java.awt.Font (eg. Font.BOLD, Font.PLAIN)
+    private List<String> courses;
 
-    public CertificateField(String fieldName, int x, int y, String fontFamily, int fontSize, boolean boldText) {
-//        this.fieldName = new SimpleStringProperty(fieldName);
-//        this.x = new SimpleIntegerProperty(x);
-//        this.y = new SimpleIntegerProperty(y);
-//        this.fontSize = new SimpleDoubleProperty(fontSize);
-//        this.fontFamily = new SimpleStringProperty(fontFamily);
-//        this.boldText = new SimpleBooleanProperty(boldText);
-        this.fieldName = fieldName;
+
+    public CertificateField() {
+        
+    }
+    
+    public CertificateField(List<String> courses) {
+        this.courses = courses;
+    }
+    
+    public CertificateField(int x, int y) {
         this.x = x;
         this.y = y;
+    }
+    
+    public CertificateField(int x, int y, String fieldName, int fontSize, String fontFamily, int fontStyle) {
+        this.x = x;
+        this.y = y;
+        this.fieldName = fieldName;
         this.fontSize = fontSize;
         this.fontFamily = fontFamily;
-        this.boldText = boldText;
-
+        this.fontStyle = fontStyle;
     }
-
-    public String getFieldName() {
-//        return fieldName.get();
-        return fieldName;
-    }
-
+    
     public int getX() {
-//        return x.get();
         return x;
     }
 
+    public void setX(int x) {
+        this.x = x;
+    }
+
     public int getY() {
-//        return y.get();
         return y;
     }
 
-    public String getFontFamily() {
-//        return fontFamily.get();
-        return fontFamily;
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    @XmlAttribute
+    public FieldType getFieldType() {
+        return fieldType;
+    }
+
+    public void setFieldType(FieldType fieldType) {
+        this.fieldType = fieldType;
+    }
+    
+    public List<String> getCourses() {
+        return courses;
+    }
+
+    public void setCourses(List<String> courses) {
+        this.courses = courses;
+    }
+    
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
     }
 
     public int getFontSize() {
-//        return fontSize.get();
         return fontSize;
     }
 
-    public boolean isBoldText() {
-//        return boldText.get();
-        return boldText;
+    public void setFontSize(int fontSize) {
+        this.fontSize = fontSize;
     }
+
+    public String getFontFamily() {
+        return fontFamily;
+    }
+
+    public void setFontFamily(String fontFamily) {
+        this.fontFamily = fontFamily;
+    }
+
+    public int getFontStyle() {
+        return fontStyle;
+    }
+
+    public void setFontStyle(int fontStyle) {
+        this.fontStyle = fontStyle;
+    }
+
+    @Override
+    public String toString() {
+//        return super.toString();
+        String output = "";
+        output = output.concat("{CertificateField : x=" + x + ", y=" + y + ", fieldtype=" + fieldType);
+        if(fieldType != FieldType.IMAGE) {
+            if(fieldType == FieldType.TEXT) output = output.concat(", fieldname=" + fieldName);
+            output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily);
+        }
+        return output.concat("}\n");
+    }
+    
 }

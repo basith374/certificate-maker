@@ -11,6 +11,11 @@ import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import javafx.collections.ObservableList;
+import javafx.scene.Node;
+import javafx.scene.image.ImageView;
+import javafx.scene.text.Text;
 
 /**
  * @author bazi
@@ -120,13 +125,35 @@ public class ImageUtils {
     private static BufferedImage writeFieldsToImage(BufferedImage image, CertificateWrapper wrapper) {
         Graphics imageGraphics = image.getGraphics();
         imageGraphics.setColor(Color.BLACK);
-        for (CertificateField field : wrapper.getCertificateFields()) {
-//            imageGraphics.setFont(Font.getFont(field.getFontFamily()));
-            imageGraphics.setFont(new Font(field.getFontFamily(), field.isBoldText()?Font.BOLD:Font.PLAIN, field.getFontSize()));
-            System.out.println(field.getFontFamily() + ", " + field.getFontSize() + "," + (field.isBoldText()?"Bold":"Plain"));
-            imageGraphics.drawString(field.text, field.getX(), field.getY());
-        }
+//        for (CertificateField field : wrapper.getCertificateFields()) {
+////            imageGraphics.setFont(Font.getFont(field.getFontFamily()));
+//            imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle() == Font.BOLD ? Font.BOLD : Font.PLAIN, field.getFontSize()));
+////            System.out.println(field.getFontFamily() + ", " + field.getFontSize() + "," + (field.isBoldText()?"Bold":"Plain"));
+////            imageGraphics.drawString(field.text, field.getX(), field.getY());
+//        }
         return image;
+    }
+    
+    // new Method, use this
+    private static BufferedImage writeFieldsToImage(Image image, CertificateWrapper wrapper, ArrayList<String> textFields) {
+        BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+        
+        Graphics2D imageGraphics = (Graphics2D) bufferedImage.getGraphics();
+        // TODO antialiasing, dithering
+        
+        imageGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        imageGraphics.setColor(Color.BLACK);
+        
+        int index=0;
+//        for (CertificateField field : wrapper.getCertificateFields()) {
+//            if(field.getFieldType() != FieldType.IMAGE) {
+//                imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle(), field.getFontSize()));
+//                imageGraphics.drawString(textFields.get(index), field.getX(), field.getY());
+//            }
+//            index++;
+//        }
+        
+        return bufferedImage;
     }
 
 

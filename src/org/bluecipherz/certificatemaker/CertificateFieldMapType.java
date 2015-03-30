@@ -4,10 +4,15 @@
  */
 package org.bluecipherz.certificatemaker;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author bazi
  */
-public class AdaptedCertificateField {
+public class CertificateFieldMapType {
+    
+    List<CertificateFieldMapEntry> list = new ArrayList<CertificateFieldMapEntry>();
     
 }

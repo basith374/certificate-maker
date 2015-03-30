@@ -4,43 +4,33 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
 
 /**
  * Created by bazi on 23/3/15.
  */
-@XmlRootElement(name="certificatefields")
+@XmlRootElement(name="certificatewrapper")
+@XmlAccessorType(XmlAccessType.PROPERTY)
 public class CertificateWrapper {
-    private List<CertificateField> certificateFields;
-    private File image;
+    private Map<FieldType,CertificateField> certificateFields;
     private String name;
+    private File certificateImage;
 
-    public String filePath;
-    public boolean changed = false;
-
-    private int imageX;
-
-    @XmlElement(name = "imagex")
-    public int getImageX() {
-        return imageX;
+    @XmlAttribute(name = "certificateimage")
+    public File getCertificateImage() {
+        return certificateImage;
     }
 
-    public void setImageX(int imageX) {
-        this.imageX = imageX;
+    public void setCertificateImage(File certificateImage) {
+        this.certificateImage = certificateImage;
     }
 
-    @XmlElement(name = "imagex")
-    public int getImageY() {
-        return imageY;
-    }
-
-    public void setImageY(int imageY) {
-        this.imageY = imageY;
-    }
-
-    private int imageY;
-
-    @XmlElement(name = "certificatename")
+    @XmlAttribute(name = "certificatename")
     public String getName() {
         return name;
     }
@@ -49,23 +39,31 @@ public class CertificateWrapper {
         this.name = name;
     }
 
-    @XmlElement(name = "imagepath")
-    public File getImage() {
-        return image;
-    }
-
-    public void setImage(File image) {
-        this.image = image;
-    }
-
-//    @XmlElement(name = "certificatefield")
-    @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
-    public List<CertificateField> getCertificateFields() {
+//    @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
+    @XmlElement(name = "certificatefield")
+    @XmlJavaTypeAdapter(CertificateFieldMapAdapter.class)
+    public Map<FieldType, CertificateField> getCertificateFields() {
         return certificateFields;
     }
 
-    public void setCertificateFields(List<CertificateField> certificateFields) {
+    public void setCertificateFields(Map<FieldType, CertificateField> certificateFields) {
         this.certificateFields = certificateFields;
     }
 
+    @Override
+    public String toString() {
+//        return super.toString();
+        String output = "{";
+        
+        // name
+        output = output.concat("Certificate Wrapper : name=" + name);
+        // image
+        output = output.concat(" image=" + certificateImage.toString());
+        // fields
+        output = output.concat("\nfields={" + certificateFields.toString() + "}");
+        // courses
+//        output = output.concat("\ncourses={" + courses.toString() + "}");
+        // end
+        return output.concat("\n}");
+    }
 }

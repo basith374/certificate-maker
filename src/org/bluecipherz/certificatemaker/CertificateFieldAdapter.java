@@ -1,26 +1,46 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
 package org.bluecipherz.certificatemaker;
 
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 
 /**
- * Created by bazi on 23/3/15.
+ *
+ * @author bazi
  */
-public class CertificateFieldAdapter extends XmlAdapter<AdaptedCertificateField, CertificateField> {
+public class CertificateFieldAdapter extends XmlAdapter<CertificateField, CertificateField> {
 
     @Override
-    public CertificateField unmarshal(AdaptedCertificateField v) throws Exception {
-        return new CertificateField(v.getFieldName(), v.getX(), v.getY(), v.getFontFamily(), (int) v.getFontSize(), v.isBoldText());
+    public CertificateField unmarshal(CertificateField v) throws Exception {
+        System.out.println("unmarshalling using certificatefieldadapter"); // debug
+        CertificateField certificateField = new CertificateField(v.getX(), v.getY());
+        if(v.getFieldType() == FieldType.IMAGE) {
+            certificateField.setFieldType(FieldType.IMAGE);
+        } else {
+            certificateField.setFieldName(v.getFieldName());
+            certificateField.setFieldType(v.getFieldType());
+            certificateField.setFontFamily(v.getFontFamily());
+            certificateField.setFontSize(v.getFontSize());
+            certificateField.setFontStyle(v.getFontStyle());
+        }
+        return certificateField;
     }
 
     @Override
-    public AdaptedCertificateField marshal(CertificateField v) throws Exception {
-        AdaptedCertificateField adaptedCertificateField = new AdaptedCertificateField();
-        adaptedCertificateField.setFieldName(v.getFieldName());
-        adaptedCertificateField.setX(v.getX());
-        adaptedCertificateField.setY(v.getY());
-        adaptedCertificateField.setFontFamily(v.getFontFamily());
-        adaptedCertificateField.setFontSize(v.getFontSize());
-        adaptedCertificateField.setBoldText(v.isBoldText());
-        return adaptedCertificateField;
+    public CertificateField marshal(CertificateField v) throws Exception {
+        CertificateField certificateField = new CertificateField(v.getX(), v.getY());
+        if(v.getFieldType() == FieldType.IMAGE) {
+            certificateField.setFieldType(FieldType.IMAGE);
+        } else {
+            certificateField.setFieldName(v.getFieldName());
+            certificateField.setFieldType(v.getFieldType());
+            certificateField.setFontFamily(v.getFontFamily());
+            certificateField.setFontSize(v.getFontSize());
+            certificateField.setFontStyle(v.getFontStyle());
+        }
+        return certificateField;
     }
+    
 }

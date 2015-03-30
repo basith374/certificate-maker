@@ -8,6 +8,10 @@ package org.bluecipherz.certificatemaker;
  *
  * @author bazi
  */
-public class AdaptedCertificateField {
+class CertificateFieldMapEntry {
+
+    public FieldType key;
+    
+    public CertificateField value;
     
 }
