@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +18,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 @XmlRootElement(name="certificatewrapper")
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class CertificateWrapper {
-    private Map<FieldType,CertificateField> certificateFields;
+    private ArrayList<CertificateField> certificateFields;
     private String name;
     private File certificateImage;
 
@@ -40,13 +41,13 @@ public class CertificateWrapper {
     }
 
 //    @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
+//    @XmlJavaTypeAdapter(CertificateFieldMapAdapter.class)
     @XmlElement(name = "certificatefield")
-    @XmlJavaTypeAdapter(CertificateFieldMapAdapter.class)
-    public Map<FieldType, CertificateField> getCertificateFields() {
+    public ArrayList<CertificateField> getCertificateFields() {
         return certificateFields;
     }
 
-    public void setCertificateFields(Map<FieldType, CertificateField> certificateFields) {
+    public void setCertificateFields(ArrayList<CertificateField> certificateFields) {
         this.certificateFields = certificateFields;
     }
 
@@ -60,7 +61,7 @@ public class CertificateWrapper {
         // image
         output = output.concat(" image=" + certificateImage.toString());
         // fields
-        output = output.concat("\nfields={" + certificateFields.toString() + "}");
+        output = output.concat("\nfields={\n" + certificateFields.toString() + "}");
         // courses
 //        output = output.concat("\ncourses={" + courses.toString() + "}");
         // end

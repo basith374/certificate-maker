@@ -10,12 +10,18 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.image.ImageView;
 import javafx.scene.text.Text;
+import javax.imageio.ImageWriter;
 
 /**
  * @author bazi
@@ -135,23 +141,31 @@ public class ImageUtils {
     }
     
     // new Method, use this
-    private static BufferedImage writeFieldsToImage(Image image, CertificateWrapper wrapper, ArrayList<String> textFields) {
+    public static BufferedImage createBufferedImage(Image image, HashMap<CertificateField, String> fields) throws FileNotFoundException {
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
         
         Graphics2D imageGraphics = (Graphics2D) bufferedImage.getGraphics();
         // TODO antialiasing, dithering
         
         imageGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        // there are three antialiasing options that i think can be used here but dont know which to use.
+        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON); // default
+//        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB); // good on lcd
+//        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_GASP); // if the font has antialiasing details in it
         imageGraphics.setColor(Color.BLACK);
         
         int index=0;
-//        for (CertificateField field : wrapper.getCertificateFields()) {
-//            if(field.getFieldType() != FieldType.IMAGE) {
-//                imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle(), field.getFontSize()));
-//                imageGraphics.drawString(textFields.get(index), field.getX(), field.getY());
-//            }
-//            index++;
-//        }
+        for (Map.Entry<CertificateField, String> field : fields.entrySet()) {
+            if(field.getKey().getFieldType() == FieldType.IMAGE) {
+                // draw avatar image
+//                imageGraphics.drawImage(new BufferedImage(), index, index, null);
+            } else {
+                imageGraphics.setFont(new Font(field.getKey().getFontFamily(), field.getKey().getFontStyle(), field.getKey().getFontSize()));
+                imageGraphics.drawString(field.getValue(), field.getKey().getX(), field.getKey().getY());
+                System.out.println("drawString(" + field.getValue() + ")"); // debug
+            }
+            index++;
+        }       
         
         return bufferedImage;
     }

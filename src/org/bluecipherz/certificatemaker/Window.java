@@ -144,11 +144,13 @@ public class Window extends Application {
     private Node getLeftBar() {
         ToolBar toolBar = new ToolBar();
 
-        final Button button1 = new Button(); // MOVE
-        final Button button2 = new Button(); // insert IMAGE
-        final Button button3 = new Button(); // insert TEXT
-        final Button button4 = new Button(); // delete
-        final Button button5 = new Button(); // edit
+        final ToggleButton button1 = new ToggleButton(); // MOVE
+        final ToggleButton button2 = new ToggleButton(); // insert IMAGE
+        final ToggleButton button3 = new ToggleButton(); // insert TEXT
+        final ToggleButton button4 = new ToggleButton(); // delete
+        final ToggleButton button5 = new ToggleButton(); // edit
+        ToggleGroup group = new ToggleGroup();
+        group.getToggles().addAll(button1, button2, button3, button4, button5);
 
         button1.setGraphic(new ImageView(ResourceManger.getInstance().movex32));
         button2.setGraphic(new ImageView(ResourceManger.getInstance().addimgx32));
@@ -159,7 +161,7 @@ public class Window extends Application {
         EventHandler<ActionEvent> eventHandler = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                Button button = (Button) event.getSource();
+                ToggleButton button = (ToggleButton) event.getSource();
                 if (button1.equals(button)) { // MOVE
                     MOUSEMODE = MouseMode.MOVE;
                     setCursorIconForAllTextAtAllTab(Cursor.MOVE); // revert
@@ -704,9 +706,10 @@ public class Window extends Application {
         CertificateTab tab = (CertificateTab) tabPane.getTabs().get(index);
         ScrollPane scrollPane = (ScrollPane) tab.getContent();
         Group group = (Group) scrollPane.getContent();
-        ObservableMap<FieldType, CertificateField> certificateFieldMap = populateCertificateFields(group);
         CertificateWrapper wrapper = tab.getCertificateWrapper(); // TODO change certificatelist to tabs
-        wrapper.setCertificateFields(certificateFieldMap);
+        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
+        wrapper.setCertificateFields(certificateFieldList);
+        System.out.println("populated wrapper :" + wrapper);
         createCertificateFile(file, wrapper);
         tab.setChanged(false);
 //        tab.setFile(file); // done at an upper level
@@ -728,7 +731,7 @@ public class Window extends Application {
                 if (file.exists()) {
                     wrapper = (CertificateWrapper) um.unmarshal(file);
                 }
-//                System.out.println("Unmarshalling...\n" + wrapper); // IMPORTANT debug
+                System.out.println("Unmarshalling...\n" + wrapper); // IMPORTANT debug
             } catch (JAXBException e) {
                 e.printStackTrace();
             }
@@ -750,8 +753,26 @@ public class Window extends Application {
         String fontFamily = font.getFamily();
         String fontWeight = font.getStyle();
         int fontStyle = (FontWeight.BOLD.toString().equalsIgnoreCase(fontWeight)) ? java.awt.Font.BOLD : java.awt.Font.PLAIN;
-        CertificateField field = new CertificateField(x, y, text.getText(), fontSize, fontFamily, fontStyle);
-        field.setFieldType(text.getFieldType());
+        
+        // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
+        int middlex = (int) (x + text.getLayoutBounds().getWidth() / 2);
+        int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
+        
+        CertificateField field = new CertificateField(middlex, middley);
+//        CertificateField field = new CertificateField(x, y, text.getText(), fontSize, fontFamily, fontStyle);
+        field.setFieldType(text.getCertificateField().getFieldType());
+        if(field.getFieldType() == FieldType.TEXT) field.setFieldName(text.getText());
+        if(field.getFieldType() == FieldType.COURSE) field.setCourses(text.getCertificateField().getCourses()); // new fix , not sure about it. LIFE SAVER! BIG BUG KILLER!
+//        if(field.getFieldType() == FieldType.COURSE) { // debug
+//            System.out.println("converting to certificatefield :\nCourses : ");
+//            for(String s : field.getCourses()) {
+//                System.out.print(s + ", ");
+//            }
+//            System.out.println("");
+//        }
+        field.setFontFamily(fontFamily);
+        field.setFontSize(fontSize);
+        field.setFontStyle(fontStyle);
         return field;
     }
     
@@ -763,7 +784,12 @@ public class Window extends Application {
          * and the second is the avatar image, we only need to get the avatar image.
          */
         if(x != 0 && y != 0) {
-            CertificateField field = new CertificateField(x, y); // this constructor makes this an image type
+            // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
+            int middlex = (int) (x + imageView.getImage().getWidth() / 2);
+            int middley = (int) (y + imageView.getImage().getHeight() / 2);
+            
+            CertificateField field = new CertificateField(middlex, middley);
+//            CertificateField field = new CertificateField(x, y);
             field.setFieldType(FieldType.IMAGE);
             return field;
         } else {
@@ -777,20 +803,21 @@ public class Window extends Application {
      * @param group
      * @return
      */
-    private ObservableMap<FieldType, CertificateField> populateCertificateFields(Group group) {
-        ObservableMap<FieldType, CertificateField> certificateFieldMap = FXCollections.observableHashMap();
+    private ArrayList<CertificateField> populateCertificateFields(Group group) {
+        ArrayList<CertificateField> certificateFieldList = new ArrayList<>();
         for (Node node : group.getChildren()) {
             if (node instanceof CertificateText) {
-                CertificateText text = (CertificateText) node;
-                certificateFieldMap.put(text.getFieldType(), convertToCertificateField(node));
+//                CertificateText text = (CertificateText) node;
+//                certificateFieldList.add(text.getCertificateField()); // new fix, but this wont work, need alignment
+                certificateFieldList.add(convertToCertificateField(node)); // fixed, courses
             } else if(node instanceof ImageView) {
-                CertificateField field = convertToCertificateImage(node);
+                CertificateField field = convertToCertificateImage(node); // this returns null for the main certificate image
                 if(field != null) {
-                    certificateFieldMap.put(FieldType.IMAGE, field);
+                    certificateFieldList.add(field);
                 }
             }
         }
-        return certificateFieldMap;
+        return certificateFieldList;
     }
 
     /**
@@ -804,7 +831,6 @@ public class Window extends Application {
             Marshaller m = context.createMarshaller();
             m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
             m.marshal(wrapper, file);
-            System.out.println("populated wrapper : " + wrapper);
             UserDataManager.setCertificateFilePath(file);
         } catch (JAXBException e) {
             e.printStackTrace();
@@ -875,8 +901,14 @@ public class Window extends Application {
                     
                     CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
                     if(!tab.isAvatarFieldAdded()) {
+                        
+                        // middle align shit
+                        int middlex = (int) (x - ResourceManger.getInstance().avatarx160.getWidth() / 2);
+                        int middley = (int) (y - ResourceManger.getInstance().avatarx160.getHeight() / 2);
+                        
                         // add to tab
-                        ImageView imageView = createAvatarImage(x, y);
+                        ImageView imageView = createAvatarImage(middlex, middley);
+//                        ImageView imageView = createAvatarImage(x, y);
                         ((Group)((ScrollPane)tab.getContent()).getContent()).getChildren().add(imageView);
                         tab.setAvatarFieldAdded(true);
 //                        imageView.setX(x); // redundant but necessary, 
@@ -916,7 +948,7 @@ public class Window extends Application {
         CertificateWrapper certificateWrapper = new CertificateWrapper();
         certificateWrapper.setName(fileName); // used as tab name and save name
         certificateWrapper.setCertificateImage(new File(imagePath));
-        certificateWrapper.setCertificateFields(new HashMap<FieldType, CertificateField>());
+        certificateWrapper.setCertificateFields(new ArrayList<CertificateField>());
         return certificateWrapper;
     }
     
@@ -961,14 +993,14 @@ public class Window extends Application {
         group.getChildren().add(imageView);
         // after adding the imageview, add the fields to the opened certificate if there are any
         if(!certificateWrapper.getCertificateFields().isEmpty()) {
-            Set<Map.Entry<FieldType, CertificateField>> set = certificateWrapper.getCertificateFields().entrySet();
-            for (Map.Entry<FieldType, CertificateField> certificateField : set) {
-                if(certificateField.getKey() != FieldType.IMAGE) { // its a text object as long as its not an image
-                    CertificateText certificateText = createText(certificateField.getValue());
+            
+            for (CertificateField certificateField : wrapper.getCertificateFields()) {
+                if(certificateField.getFieldType() != FieldType.IMAGE) { // its a text object as long as its not an image
+                    CertificateText certificateText = createText(certificateField);
                     group.getChildren().add(certificateText);
                 } else {
                     // add avatar image
-                    ImageView avatarImage = createAvatarImage(certificateField.getValue().getX(), certificateField.getValue().getY());
+                    ImageView avatarImage = createAvatarImage(certificateField.getX(), certificateField.getY());
                     group.getChildren().add(avatarImage);
                 }
             }
@@ -1021,12 +1053,13 @@ public class Window extends Application {
                 EventType<? extends Event> eventType = event.getEventType();
                 CertificateText text = (CertificateText) event.getSource();
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
+//                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
+                    if(MOUSEMODE == MouseMode.MOVE) {
                         initialComponentX = text.getX();
                         initialComponentY = text.getY();
                         initialEventX = event.getX();
                         initialEventY = event.getY();
-                        System.out.println("Mode : add, move"); // debug
+                        System.out.println("Mode : move"); // debug
                     } else if (MOUSEMODE == MouseMode.DELETE) {
                         Group parent = (Group) text.getParent();
                         parent.getChildren().remove(text);
@@ -1034,21 +1067,31 @@ public class Window extends Application {
                     } else if (MOUSEMODE == MouseMode.EDIT) {
                         LABEL_DIALOG.prepareAndShowEditTextDialog(text);
                         System.out.println("Mode : edit"); // debug
+//                        if(text.getCertificateField().getFieldType() == FieldType.COURSE) { // new debug
+//                            System.out.println("Courses :");
+//                            for(String s :text.getCertificateField().getCourses()) {
+//                                System.out.println(s);
+//                            }
+//                        }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
-                    double currentX = event.getX();
-                    double currentY = event.getY();
-                    double x = currentX - initialEventX + initialComponentX;
-                    double y = currentY - initialEventY + initialComponentY;
-                    text.setX(x);
-                    text.setY(y);
+                    if(MOUSEMODE == MouseMode.MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        text.setX(x);
+                        text.setY(y);
+                    }
                 } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    double currentX = event.getX();
-                    double currentY = event.getY();
-                    double x = currentX - initialEventX + initialComponentX;
-                    double y = currentY - initialEventY + initialComponentY;
-                    text.setX(x);
-                    text.setY(y);
+                    if(MOUSEMODE == MouseMode.MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        text.setX(x);
+                        text.setY(y);
+                    }
                 }
             }
         };
@@ -1059,7 +1102,7 @@ public class Window extends Application {
     }
 
     public ImageView createAvatarImage(int x, int y) {
-        ImageView imageView = new ImageView(ResourceManger.getInstance().avatarx160);
+        ImageView imageView = new ImageView(ResourceManger.getInstance().avatarx160); // dependency, also at one other place
         imageView.setX(x);
         imageView.setY(y);
         EventHandler<MouseEvent> mouseHandler = new EventHandler<MouseEvent>() {
@@ -1072,33 +1115,37 @@ public class Window extends Application {
                 EventType<? extends Event> eventType = event.getEventType();
                 ImageView imageView = (ImageView) event.getSource();
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
+//                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
+                    if(MOUSEMODE == MouseMode.MOVE) {
                         initialComponentX = imageView.getX();
                         initialComponentY = imageView.getY();
                         initialEventX = event.getX();
                         initialEventY = event.getY();
-                        System.out.println("Mode : add, move"); // debug
+                        System.out.println("Mode : move"); // debug
                     } else if (MOUSEMODE == MouseMode.DELETE) {
                         Group parent = (Group) imageView.getParent();
                         parent.getChildren().remove(imageView);
+                        ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).setAvatarFieldAdded(false);
                         System.out.println("Mode : delete"); // debug
-                    } else if (MOUSEMODE == MouseMode.EDIT) {
-                        System.out.println("Mode : edit"); // debug
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
+                    if(MOUSEMODE == MouseMode.MOVE) {
                     double currentX = event.getX();
-                    double currentY = event.getY();
-                    double x = currentX - initialEventX + initialComponentX;
-                    double y = currentY - initialEventY + initialComponentY;
-                    imageView.setX(x);
-                    imageView.setY(y);
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        imageView.setX(x);
+                        imageView.setY(y);
+                    }
                 } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    double currentX = event.getX();
-                    double currentY = event.getY();
-                    double x = currentX - initialEventX + initialComponentX;
-                    double y = currentY - initialEventY + initialComponentY;
-                    imageView.setX(x);
-                    imageView.setY(y);
+                    if(MOUSEMODE == MouseMode.MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        imageView.setX(x);
+                        imageView.setY(y);
+                    }
                 }
             }
         };

@@ -5,7 +5,10 @@
 package org.bluecipherz.certificatemaker;
 
 import java.util.List;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 /**
@@ -24,13 +27,8 @@ public class CertificateField {
     private int fontStyle; // depending on java.awt.Font (eg. Font.BOLD, Font.PLAIN)
     private List<String> courses;
 
-
     public CertificateField() {
         
-    }
-    
-    public CertificateField(List<String> courses) {
-        this.courses = courses;
     }
     
     public CertificateField(int x, int y) {
@@ -38,15 +36,7 @@ public class CertificateField {
         this.y = y;
     }
     
-    public CertificateField(int x, int y, String fieldName, int fontSize, String fontFamily, int fontStyle) {
-        this.x = x;
-        this.y = y;
-        this.fieldName = fieldName;
-        this.fontSize = fontSize;
-        this.fontFamily = fontFamily;
-        this.fontStyle = fontStyle;
-    }
-    
+    @XmlAttribute
     public int getX() {
         return x;
     }
@@ -55,6 +45,7 @@ public class CertificateField {
         this.x = x;
     }
 
+    @XmlAttribute
     public int getY() {
         return y;
     }
@@ -72,14 +63,16 @@ public class CertificateField {
         this.fieldType = fieldType;
     }
     
+    @XmlElement(name = "course")
     public List<String> getCourses() {
         return courses;
     }
 
     public void setCourses(List<String> courses) {
+//        System.out.println("setCourses() called"); // debug
         this.courses = courses;
     }
-    
+
     public String getFieldName() {
         return fieldName;
     }
@@ -119,7 +112,21 @@ public class CertificateField {
         output = output.concat("{CertificateField : x=" + x + ", y=" + y + ", fieldtype=" + fieldType);
         if(fieldType != FieldType.IMAGE) {
             if(fieldType == FieldType.TEXT) output = output.concat(", fieldname=" + fieldName);
-            output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily);
+            output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily + ", fontstyle=" + fontStyle);
+            if(fieldType == FieldType.COURSE) {
+                output = output.concat(", courses : ");
+                if(courses != null) {
+                    if(!courses.isEmpty()) {
+                        for(String course : courses) {
+                            output = output.concat(course+",");
+                        }
+                    } else {
+                        System.out.println("Courses is empty");
+                    }
+                } else {
+                    System.out.println("Courses has become null.");
+                }
+            }
         }
         return output.concat("}\n");
     }
