@@ -59,7 +59,7 @@ import javafx.scene.layout.HBox;
  * does. Feel free to do it if want to. :)
  * Created by bazi on 22/3/15.
  */
-public class Window extends Application {
+public class Window{
 
     private static final int DEFAULT_WIDTH = 800;
     private static final int DEFAULT_HEIGHT = 500;
@@ -69,6 +69,7 @@ public class Window extends Application {
     private static NewFileDialog NEWFILE_DIALOG;
     private static LabelDialog LABEL_DIALOG;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
+    private static ImageSizeDialog IMAGESIZEDIALOG;
     
     private BorderPane borderPane;
     private TabPane tabPane;
@@ -79,6 +80,10 @@ public class Window extends Application {
     private ObservableList<String> fontFamilyList; // System specific
     private ObservableList<String> fontStyleList;
     private ObservableList<Integer> fontSizeList;
+    
+    private ArrayList<File> recentFiles = new ArrayList<>();
+    private CertificateUtils certificateUtils;
+    
 
     private TextField getTextField(FileChooser fileChooser) {
         LinkedList<Object> queue = new LinkedList<>();
@@ -104,10 +109,11 @@ public class Window extends Application {
 
     private static MouseMode MOUSEMODE;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
+    public Window(){
+        Stage primaryStage = new Stage();
         ResourceManger.getInstance().loadSplashResource(); // TODO seperate splash
         ResourceManger.getInstance().loadAppResources();
+        certificateUtils = new CertificateUtils();
         
         primaryStage.getIcons().add(ResourceManger.getInstance().iconx48);
         PRIMARY_STAGE = primaryStage;
@@ -129,9 +135,11 @@ public class Window extends Application {
         root.getChildren().add(borderPane);
 
         primaryStage.setScene(scene);
-        primaryStage.show();
     }
 
+    public void show() {
+        PRIMARY_STAGE.show();
+    }
     
     /******************************************
      *        GUI INITIALIZER METHODS         *
@@ -318,7 +326,7 @@ public class Window extends Application {
                 } else if ("new certificate".equalsIgnoreCase(action)) {
                     File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "Set template for certificate", null);
                     if(file != null) {
-                        CertificateWrapper certificateWrapper = openTemplate(file);
+                        CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
                         createNewCertficateDialog(PRIMARY_STAGE, certificateWrapper);
                     }
                 } else if ("open template".equalsIgnoreCase(action)) {
@@ -370,7 +378,14 @@ public class Window extends Application {
         Label recentTemplatesLbl = new Label("Recent :");
         toolBar.getItems().add(recentTemplatesLbl);
 
-        final ComboBox recentTemplatesBox = new ComboBox();
+//        ObservableList<String> recentFiles = FXCollections.observableArrayList(UserDataManager.getRecentTemplates());
+        final ComboBox recentTemplatesBox;
+//        if(recentFiles != null) {
+//            recentTemplatesBox = new ComboBox(recentFiles);
+//        } else {
+//            System.out.println("Shitzu");
+            recentTemplatesBox = new ComboBox();
+//        }
 //        final ComboBox recentTemplatesBox = new ComboBox(getRecentTemplates()); // null pointer
         toolBar.getItems().add(recentTemplatesBox);
 
@@ -487,7 +502,7 @@ public class Window extends Application {
 //                    }
 //                }
 //                CertificateWrapper certificateWrapper = createCertificateWrapper(title, "/home/bazi/Pictures/me/0.jpg");
-                CertificateWrapper certificateWrapper = createCertificateWrapper(title, "C:\\Documents and Settings\\All Users\\Documents\\My Pictures\\Sample Pictures\\Sunset.jpg");
+//                CertificateWrapper certificateWrapper = createCertificateWrapper(title, "C:\\Documents and Settings\\All Users\\Documents\\My Pictures\\Sample Pictures\\Sunset.jpg");
 //                org.bluecipherz.certificatemaker.CertificateWrapper certificateWrapper = createCertificateWrapper("Test", "/home/bazi/Pictures/me/0.jpg");
 //                createNewTab(certificateWrapper);
             }
@@ -495,7 +510,7 @@ public class Window extends Application {
         toolButton4.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                CertificateWrapper certificateWrapper = openTemplate(getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "", null));
+                CertificateWrapper certificateWrapper = certificateUtils.openTemplate(getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "", null));
                 createNewCertficateDialog(PRIMARY_STAGE, certificateWrapper);
             }
         });
@@ -597,11 +612,11 @@ public class Window extends Application {
         if(index != -1) {// do the rest
             if (tab.getFile() == null) {
                 File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template", tabTitle);
-                saveFileAtTab(index, file);
+                certificateUtils.saveFileAtTab(tab, file);
                 tab.setFile(file); // TODO change filepath to tabs
             } else {
                 System.out.println("Saving file : " + tab.getFile().getAbsolutePath()); // DEBUG
-                saveFileAtTab(index, tab.getFile());
+                certificateUtils.saveFileAtTab(tab, tab.getFile());
             }
         } else {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "Nothing to save");
@@ -614,10 +629,11 @@ public class Window extends Application {
      * @param index
      */
     private void saveAsFile(Stage stage) {
+        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1){
             File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.SAVE, "Save template", null);
-            saveFileAtTab(index, file);
+            certificateUtils.saveFileAtTab(tab, file);
         } else {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "Nothing to save");
         }
@@ -667,7 +683,7 @@ public class Window extends Application {
 //            System.out.println("saving file by dialog"); // debug
             file = fileChooser.showSaveDialog(stage);
 //            System.out.println("previois path : " + file.getAbsolutePath()); // debug
-            file = correctXmlExtension(file);
+            file = certificateUtils.correctXmlExtension(file);
 //            System.out.println("current path : " + file.getAbsolutePath()); // debug
         }
         return file;
@@ -693,193 +709,6 @@ public class Window extends Application {
     
     
     
-    /*************************
-     *   LOW LEVEL METHODS   *
-     ************************/
-    
-    /**
-     * saves certificate using the elements from the tablist and ceritificate list.
-     * @param index
-     * @param file 
-     */
-    private void saveFileAtTab(int index, File file) {
-        CertificateTab tab = (CertificateTab) tabPane.getTabs().get(index);
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
-        CertificateWrapper wrapper = tab.getCertificateWrapper(); // TODO change certificatelist to tabs
-        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
-        wrapper.setCertificateFields(certificateFieldList);
-        System.out.println("populated wrapper :" + wrapper);
-        createCertificateFile(file, wrapper);
-        tab.setChanged(false);
-//        tab.setFile(file); // done at an upper level
-        UserDataManager.setLastActivityPath(file);
-    }
-
-    /**
-     * Used to retrieve certificatewrapper object from the xml template file.
-     * @param file
-     * @return
-     */
-    private CertificateWrapper openTemplate(File file) { // new implementation
-        CertificateWrapper wrapper = null;
-        boolean fileOk = testFileIntegrity(file);
-        if(fileOk) {
-            try {
-                JAXBContext context = JAXBContext.newInstance(CertificateWrapper.class);
-                Unmarshaller um = context.createUnmarshaller();
-                if (file.exists()) {
-                    wrapper = (CertificateWrapper) um.unmarshal(file);
-                }
-                System.out.println("Unmarshalling...\n" + wrapper); // IMPORTANT debug
-            } catch (JAXBException e) {
-                e.printStackTrace();
-            }
-        }
-        return wrapper;
-    }
-
-    /**
-     * Converts a text object in a tab to a certificatefield object that encapsulates its data.
-     * @param node
-     * @return
-     */
-    private CertificateField convertToCertificateField(Node node) {
-        CertificateText text = (CertificateText) node;
-        int x = (int) text.getX();
-        int y = (int) text.getY();
-        Font font = text.getFont();
-        int fontSize = (int) font.getSize(); // TODO do something
-        String fontFamily = font.getFamily();
-        String fontWeight = font.getStyle();
-        int fontStyle = (FontWeight.BOLD.toString().equalsIgnoreCase(fontWeight)) ? java.awt.Font.BOLD : java.awt.Font.PLAIN;
-        
-        // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
-        int middlex = (int) (x + text.getLayoutBounds().getWidth() / 2);
-        int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
-        
-        CertificateField field = new CertificateField(middlex, middley);
-//        CertificateField field = new CertificateField(x, y, text.getText(), fontSize, fontFamily, fontStyle);
-        field.setFieldType(text.getCertificateField().getFieldType());
-        if(field.getFieldType() == FieldType.TEXT) field.setFieldName(text.getText());
-        if(field.getFieldType() == FieldType.COURSE) field.setCourses(text.getCertificateField().getCourses()); // new fix , not sure about it. LIFE SAVER! BIG BUG KILLER!
-//        if(field.getFieldType() == FieldType.COURSE) { // debug
-//            System.out.println("converting to certificatefield :\nCourses : ");
-//            for(String s : field.getCourses()) {
-//                System.out.print(s + ", ");
-//            }
-//            System.out.println("");
-//        }
-        field.setFontFamily(fontFamily);
-        field.setFontSize(fontSize);
-        field.setFontStyle(fontStyle);
-        return field;
-    }
-    
-    private CertificateField convertToCertificateImage(Node node) {
-        ImageView imageView = (ImageView) node;
-        int x = (int) imageView.getX();
-        int y = (int) imageView.getY();
-        /*there are two image views in the graph, one is the certificate image
-         * and the second is the avatar image, we only need to get the avatar image.
-         */
-        if(x != 0 && y != 0) {
-            // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
-            int middlex = (int) (x + imageView.getImage().getWidth() / 2);
-            int middley = (int) (y + imageView.getImage().getHeight() / 2);
-            
-            CertificateField field = new CertificateField(middlex, middley);
-//            CertificateField field = new CertificateField(x, y);
-            field.setFieldType(FieldType.IMAGE);
-            return field;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * create a certificatefield array using all the text objects in a tab by specifying the group object
-     * inside the tab and getting its fields manually.
-     * @param group
-     * @return
-     */
-    private ArrayList<CertificateField> populateCertificateFields(Group group) {
-        ArrayList<CertificateField> certificateFieldList = new ArrayList<>();
-        for (Node node : group.getChildren()) {
-            if (node instanceof CertificateText) {
-//                CertificateText text = (CertificateText) node;
-//                certificateFieldList.add(text.getCertificateField()); // new fix, but this wont work, need alignment
-                certificateFieldList.add(convertToCertificateField(node)); // fixed, courses
-            } else if(node instanceof ImageView) {
-                CertificateField field = convertToCertificateImage(node); // this returns null for the main certificate image
-                if(field != null) {
-                    certificateFieldList.add(field);
-                }
-            }
-        }
-        return certificateFieldList;
-    }
-
-    /**
-     * Low level method used to save a certificatewrapper object as a template xml file.
-     * @param file
-     * @param wrapper
-     */
-    private void createCertificateFile(File file, CertificateWrapper wrapper) {
-        try {
-            JAXBContext context = JAXBContext.newInstance(CertificateWrapper.class);
-            Marshaller m = context.createMarshaller();
-            m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-            m.marshal(wrapper, file);
-            UserDataManager.setCertificateFilePath(file);
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
-    }
-        
-    /**
-     * used to check the xml file for issues.
-     * @param file 
-     */
-    private boolean testFileIntegrity(File file) {
-        if(file != null){
-            if(file.isFile()){
-                // TODO not yet implemented
-            }
-        }
-        return true;
-    }
-    
-    /**
-     * checks for the extension of the file and corrects.
-     * @param file
-     * @return 
-     */
-    private File correctXmlExtension(File file) {
-        String path = file.getAbsolutePath();
-        if(!path.endsWith(".xml")) {
-//            System.out.print("correcting file extension... , previous path : "+ path ); // debug
-            path = path.concat(".xml");
-//            System.out.println(" , corrected path : " + path); // debug
-        }
-        return new File(path);
-    }
-    
-    private Task createWorker() {
-        return new Task() {
-
-            @Override
-            protected Object call() throws Exception {
-                // 
-                return true;
-            }
-            
-        };
-    }
-    
-    /********* END LOW LEVEL METHODS *********/
-
-
     /*****************
      * EVENT HANDLERS
      ****************/
@@ -900,20 +729,24 @@ public class Window extends Application {
                     int y = (int) t.getY();
                     
                     CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
-                    if(!tab.isAvatarFieldAdded()) {
-                        
-                        // middle align shit
-                        int middlex = (int) (x - ResourceManger.getInstance().avatarx160.getWidth() / 2);
-                        int middley = (int) (y - ResourceManger.getInstance().avatarx160.getHeight() / 2);
-                        
-                        // add to tab
-                        ImageView imageView = createAvatarImage(middlex, middley);
-//                        ImageView imageView = createAvatarImage(x, y);
-                        ((Group)((ScrollPane)tab.getContent()).getContent()).getChildren().add(imageView);
+                    Node group = ((ScrollPane)tab.getContent()).getContent();
+                    if(!tab.isAvatarFieldAdded()){
+                        IMAGESIZEDIALOG.newImage(x, y);
                         tab.setAvatarFieldAdded(true);
-//                        imageView.setX(x); // redundant but necessary, 
-//                        imageView.setY(y); // redundant but necessary, 
                     }
+//                    CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+//                    if(!tab.isAvatarFieldAdded()) {
+//                        
+//                        // middle align shit
+//                        int middlex = (int) (x - ResourceManger.getInstance().avatarx160.getWidth() / 2);
+//                        int middley = (int) (y - ResourceManger.getInstance().avatarx160.getHeight() / 2);
+//                        
+//                        // add to tab
+//                        ImageView imageView = createAvatarImage(middlex, middley);
+////                        ImageView imageView = createAvatarImage(x, y);
+//                        ((Group)((ScrollPane)tab.getContent()).getContent()).getChildren().add(imageView);
+//                        tab.setAvatarFieldAdded(true);
+//                    }
                 }
             }
         };
@@ -937,27 +770,15 @@ public class Window extends Application {
         return fontFamilyList;
     }
     
-    /**
-     * used by outsiders, so public
-     * create a new blank certificate wrapper object using the specified file and image
-     * @param fileName
-     * @param imagePath
-     * @return 
-     */
-    public CertificateWrapper createCertificateWrapper(String fileName, String imagePath) {
-        CertificateWrapper certificateWrapper = new CertificateWrapper();
-        certificateWrapper.setName(fileName); // used as tab name and save name
-        certificateWrapper.setCertificateImage(new File(imagePath));
-        certificateWrapper.setCertificateFields(new ArrayList<CertificateField>());
-        return certificateWrapper;
-    }
+
     
     
     public void createNewTab(final File file) {
-        CertificateWrapper certificateWrapper = openTemplate(file);
+        CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
         CertificateTab tab = createNewTab(certificateWrapper);
         tab.setFile(file);
     }
+    
     /**
      * used by outsiders, hence public
      * Create a new tab using a certificate wrapper. the template will be
@@ -987,6 +808,9 @@ public class Window extends Application {
         if (LABEL_DIALOG == null) {
             LABEL_DIALOG = createLabelDialog(PRIMARY_STAGE, group);
         }
+        if(IMAGESIZEDIALOG == null) {
+            IMAGESIZEDIALOG = new ImageSizeDialog(PRIMARY_STAGE, this, group);
+        }
         // label dialog initialized
         imageView.setOnMouseClicked(getImageMouseHandler(LABEL_DIALOG));
         
@@ -996,11 +820,11 @@ public class Window extends Application {
             
             for (CertificateField certificateField : wrapper.getCertificateFields()) {
                 if(certificateField.getFieldType() != FieldType.IMAGE) { // its a text object as long as its not an image
-                    CertificateText certificateText = createText(certificateField);
+                    CertificateText certificateText = certificateUtils.createText(certificateField);
                     group.getChildren().add(certificateText);
                 } else {
                     // add avatar image
-                    ImageView avatarImage = createAvatarImage(certificateField.getX(), certificateField.getY());
+                    ImageView avatarImage = certificateUtils.createAvatarImage(certificateField.getX(), certificateField.getY(), certificateField.getWidth(), certificateField.getHeight());
                     group.getChildren().add(avatarImage);
                 }
             }
@@ -1034,126 +858,6 @@ public class Window extends Application {
         }
     }
 
-    /**
-     * used by outsiders
-     * converts and CertificateField into a Text object
-     * @param certificateField
-     * @return 
-     */
-    public CertificateText createText(final CertificateField certificateField) {
-        CertificateText text = new CertificateText(certificateField);
-//        text.setFont(Font.font(certificateField.getFontFamily(), certificateField.getFontSize())); // TODO custom font functionality
-        EventHandler<MouseEvent> mouseHandler = new EventHandler<MouseEvent>() {
-            public double initialEventX;
-            public double initialEventY;
-            public double initialComponentX;
-            public double initialComponentY;
-            @Override
-            public void handle(MouseEvent event) {
-                EventType<? extends Event> eventType = event.getEventType();
-                CertificateText text = (CertificateText) event.getSource();
-                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-//                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                        initialComponentX = text.getX();
-                        initialComponentY = text.getY();
-                        initialEventX = event.getX();
-                        initialEventY = event.getY();
-                        System.out.println("Mode : move"); // debug
-                    } else if (MOUSEMODE == MouseMode.DELETE) {
-                        Group parent = (Group) text.getParent();
-                        parent.getChildren().remove(text);
-                        System.out.println("Mode : delete"); // debug
-                    } else if (MOUSEMODE == MouseMode.EDIT) {
-                        LABEL_DIALOG.prepareAndShowEditTextDialog(text);
-                        System.out.println("Mode : edit"); // debug
-//                        if(text.getCertificateField().getFieldType() == FieldType.COURSE) { // new debug
-//                            System.out.println("Courses :");
-//                            for(String s :text.getCertificateField().getCourses()) {
-//                                System.out.println(s);
-//                            }
-//                        }
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        text.setX(x);
-                        text.setY(y);
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        text.setX(x);
-                        text.setY(y);
-                    }
-                }
-            }
-        };
-        text.setOnMousePressed(mouseHandler);
-        text.setOnMouseDragged(mouseHandler);
-        text.setOnMouseReleased(mouseHandler);
-        return text;
-    }
-
-    public ImageView createAvatarImage(int x, int y) {
-        ImageView imageView = new ImageView(ResourceManger.getInstance().avatarx160); // dependency, also at one other place
-        imageView.setX(x);
-        imageView.setY(y);
-        EventHandler<MouseEvent> mouseHandler = new EventHandler<MouseEvent>() {
-            public double initialEventX;
-            public double initialEventY;
-            public double initialComponentX;
-            public double initialComponentY;
-            @Override
-            public void handle(MouseEvent event) {
-                EventType<? extends Event> eventType = event.getEventType();
-                ImageView imageView = (ImageView) event.getSource();
-                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-//                    if(MOUSEMODE == MouseMode.ADD || MOUSEMODE == MouseMode.ADD_IMAGE || MOUSEMODE == MouseMode.MOVE) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                        initialComponentX = imageView.getX();
-                        initialComponentY = imageView.getY();
-                        initialEventX = event.getX();
-                        initialEventY = event.getY();
-                        System.out.println("Mode : move"); // debug
-                    } else if (MOUSEMODE == MouseMode.DELETE) {
-                        Group parent = (Group) imageView.getParent();
-                        parent.getChildren().remove(imageView);
-                        ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).setAvatarFieldAdded(false);
-                        System.out.println("Mode : delete"); // debug
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                    double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        imageView.setX(x);
-                        imageView.setY(y);
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(MOUSEMODE == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        imageView.setX(x);
-                        imageView.setY(y);
-                    }
-                }
-            }
-        };
-        imageView.setOnMousePressed(mouseHandler);
-        imageView.setOnMouseDragged(mouseHandler);
-        imageView.setOnMouseReleased(mouseHandler);
-        return imageView;
-    }
     
     /**
      * method used to show the new certificate dialog
@@ -1164,7 +868,7 @@ public class Window extends Application {
         if (NEWFILE_DIALOG != null) {
             NEWFILE_DIALOG.close();
         }
-        return new NewFileDialog(parent, "Create new Certificate", this);
+        return new NewFileDialog(parent, "Create new Certificate", this).reset();
     }
     
     /**
@@ -1189,8 +893,12 @@ public class Window extends Application {
     private NewCertificateDialog createNewCertficateDialog(Stage parent, CertificateWrapper wrapper) {
         return new NewCertificateDialog(parent, wrapper, this);
     }
-
-    public static void main(String[] args) {
-        Application.launch(args);
+    
+    public static void showEditFieldDialog(CertificateText text) {
+        LABEL_DIALOG.prepareAndShowEditTextDialog(text);
     }
+
+//    public static void main(String[] args) {
+//        Application.launch(args);
+//    }
 }

@@ -47,7 +47,7 @@ class LabelDialog extends Stage {
     private final EventHandler<ActionEvent> categoryAction;
     private CertificateText subjectText;
     private final TextField textField;
-    private Group textHolder;
+    private Group textHolder; // Group from Window class
     private static final String NEW_TEXT = "Enter a name for the newly added field:";
     private static final String EDIT_TEXT = "Edit the name of the selected field";
     private final Label asklabel;
@@ -70,6 +70,7 @@ class LabelDialog extends Stage {
     private Timeline animation;
     private Button addButton;
     private Button removeButton;
+    private CertificateUtils certificateUtils;
 
     public LabelDialog(Stage owner, final Group textHolder, final Window window) {
         super();
@@ -77,52 +78,72 @@ class LabelDialog extends Stage {
         this.textHolder = textHolder;
         initOwner(owner);
         initModality(Modality.APPLICATION_MODAL);
+        certificateUtils = new CertificateUtils();
+        
         editOkAction = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                CertificateField certificateField = (CertificateField) event.getSource();
-                if(certificateField.getFieldType() == FieldType.TEXT) {
-                    if (!"".equalsIgnoreCase(textField.getText())) {
-                        CertificateField field = generateCertificateField();
-                        changeSubjectText(subjectText, certificateField);
-                        //                        subjectText.setText(textField.getText());
-                        close();
-                    }
-                } else if(certificateField.getFieldType() == FieldType.COURSE) {
+                int x = (int) subjectText.getX();
+                int y = (int) subjectText.getY();
+                CertificateField field = generateCertificateField(x, y);
+                subjectText.setCertificateField(field);
+                if(field.getFieldType() == FieldType.TEXT && !"".equalsIgnoreCase(subjectText.getText())) {
                     close();
                 } else {
                     close();
                 }
+//                CertificateField certificateField = (CertificateField) event.getSource();
+//                if(certificateField.getFieldType() == FieldType.TEXT) {
+//                    if (!"".equalsIgnoreCase(textField.getText())) {
+//                        CertificateField field = generateCertificateField();
+//                        subjectText.setCertificateField(field);
+//                        //                        subjectText.setText(textField.getText());
+//                        close();
+//                    }
+//                } else if(certificateField.getFieldType() == FieldType.COURSE) {
+//                    close();
+//                } else {
+//                    close();
+//                }
             }
         };
         newOkAction = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                CertificateField certificateField = generateCertificateField();
+                CertificateField certificateField = generateCertificateField(newX, newY);
+                subjectText = certificateUtils.createText(certificateField);
+                textHolder.getChildren().add(subjectText);
+                
                 System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
-                if(certificateField.getFieldType() == FieldType.TEXT) {
-                    if (!"".equalsIgnoreCase(textField.getText())) {
-                        subjectText = window.createText(certificateField); // dependency
-//                        changeSubjectText(subjectText, certificateField);
-                        textHolder.getChildren().add(subjectText);
-                        close();
-                    }
-                } else if(certificateField.getFieldType() == FieldType.COURSE) {
-                    subjectText = window.createText(certificateField);
-                    textHolder.getChildren().add(subjectText);
-//                    System.out.println("Adding courses : "); // debug
-//                    for(String c : list.getItems()){
-//                        System.out.println(c);
-//                    }
-//                    subjectText.getCertificateField().setCourses(list.getItems()); // redundant
+                if(certificateField.getFieldType() == FieldType.TEXT && !"".equalsIgnoreCase(subjectText.getText())) {
                     close();
                 } else {
-                    subjectText = window.createText(certificateField); // dependency
-//                    changeSubjectText(subjectText, certificateField);
-                    textHolder.getChildren().add(subjectText);
-                    System.out.println("DEBUG : " + subjectText.getText() + ", x:" + subjectText.getX() + ", y:" + subjectText.getY() + ", parent:" + subjectText.getParent().toString() + ", font:" + subjectText.getFont().getFamily() + subjectText.getFont().getSize()); // debug
                     close();
                 }
+//                System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
+//                if(certificateField.getFieldType() == FieldType.TEXT) {
+//                    if (!"".equalsIgnoreCase(textField.getText())) {
+//                        subjectText = window.createText(certificateField); // dependency
+////                        changeSubjectText(subjectText, certificateField);
+//                        textHolder.getChildren().add(subjectText);
+//                        close();
+//                    }
+//                } else if(certificateField.getFieldType() == FieldType.COURSE) {
+//                    subjectText = window.createText(certificateField);
+//                    textHolder.getChildren().add(subjectText);
+////                    System.out.println("Adding courses : "); // debug
+////                    for(String c : list.getItems()){
+////                        System.out.println(c);
+////                    }
+////                    subjectText.getCertificateField().setCourses(list.getItems()); // redundant
+//                    close();
+//                } else {
+//                    subjectText = window.createText(certificateField); // dependency
+////                    changeSubjectText(subjectText, certificateField);
+//                    textHolder.getChildren().add(subjectText);
+//                    System.out.println("DEBUG : " + subjectText.getText() + ", x:" + subjectText.getX() + ", y:" + subjectText.getY() + ", parent:" + subjectText.getParent().toString() + ", font:" + subjectText.getFont().getFamily() + subjectText.getFont().getSize()); // debug
+//                    close();
+//                }
             }
         };
         
@@ -288,39 +309,32 @@ class LabelDialog extends Stage {
         gridPane.getChildren().remove(textLabel);
         gridPane.getChildren().remove(textField);
     }
-
-    private void changeSubjectText(Text subjectText, CertificateField certificateField) {
-        if(certificateField.getFieldType() == FieldType.TEXT) subjectText.setText(textField.getText());
-        else subjectText.setText(certificateField.getFieldType().toString());
-        String fontFamily = certificateField.getFontFamily();
-        FontWeight fontWeight = (certificateField.getFontStyle() == java.awt.Font.BOLD) ? FontWeight.BOLD : FontWeight.NORMAL;
-        int fontSize = certificateField.getFontSize();
-        subjectText.setFont(Font.font(fontFamily, fontWeight, fontSize));
-    }
-
-    private CertificateField generateCertificateField() {
-        /*
-         * Retrieve all data from boxes
-         */
+    
+    /**
+     * Retrieves data from LabelDialog gui components and generates a new corresponding CertificateField 
+     * object and returns it.
+     * @return 
+     */
+    private CertificateField generateCertificateField(int x, int y) {
+        // datas : x, y, fieldtype, fontfamily, fontsize, fontstyle, other conditions
+        CertificateField certificateField = new CertificateField(x, y);
+        // get and set field tpye
         FieldType field_type = FieldType.valueOf(fieldTypeBox.getSelectionModel().getSelectedItem().toString().toUpperCase());
+        certificateField.setFieldType(field_type);
         
+        // get font data
         String fontFamily = fontFamilyBox.getSelectionModel().getSelectedItem().toString();
         int fontSize = Integer.valueOf(fontSizeBox.getSelectionModel().getSelectedItem().toString());
         String fontStyleString = fontStyleBox.getSelectionModel().getSelectedItem().toString();
         int fontStyle = "Bold".equalsIgnoreCase(fontStyleString)?java.awt.Font.BOLD:java.awt.Font.PLAIN; // convert to awt
-        
-        /*
-         * put these data and other necessary datas to their respective fields.
-         */
-        CertificateField certificateField = new CertificateField(newX, newY);
-        certificateField.setFieldType(field_type);
-
-        if(field_type == FieldType.TEXT) certificateField.setFieldName(textField.getText());
-        if(field_type == FieldType.COURSE) certificateField.setCourses(list.getItems());
-        
+        // set font data
         certificateField.setFontFamily(fontFamily);
         certificateField.setFontSize(fontSize);
         certificateField.setFontStyle(fontStyle);
+        
+        // other conditions
+        if(field_type == FieldType.TEXT) certificateField.setFieldName(textField.getText());
+        if(field_type == FieldType.COURSE) certificateField.setCourses(list.getItems());
         
         return certificateField;
     }
@@ -340,7 +354,11 @@ class LabelDialog extends Stage {
     public void prepareAndShowEditTextDialog(CertificateText text) {
         setTitle("Edit entry");
         asklabel.setText(EDIT_TEXT);
-        subjectText = text;        
+        subjectText = text;
+        if(subjectText.getCertificateField() == null) {
+            System.out.println("WARNING : certificateField null");
+        }
+        System.out.println("Editing : " + subjectText.getCertificateField().getFieldType().toString()); // debug
         int index = subjectText.getCertificateField().getFieldType().ordinal();
         fieldTypeBox.getSelectionModel().select(index);
 //        fieldTypeBox.fireEvent(new ActionEvent(fieldTypeBox.getItems().get(index), fieldTypeBox));

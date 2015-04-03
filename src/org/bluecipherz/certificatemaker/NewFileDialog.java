@@ -28,6 +28,8 @@ class NewFileDialog extends Stage {
     File imageFile;
     private FileChooser fileChooser;
     private final Window window;
+    
+    private static CertificateUtils certificateUtils;
 
     public NewFileDialog(final Stage owner, String title, final Window newFileDialog) {
         super();
@@ -36,6 +38,9 @@ class NewFileDialog extends Stage {
         initModality(Modality.APPLICATION_MODAL);
         setOpacity(.90);
         setTitle(title);
+        
+        certificateUtils = new CertificateUtils();
+        
         Group root = new Group();
         Scene scene = new Scene(root, Color.WHITE);
         setScene(scene);
@@ -53,9 +58,9 @@ class NewFileDialog extends Stage {
         Label imagePathLabel = new Label("Certificate image path : ");
         gridPane.add(imagePathLabel, 0, 2);
         // text fields
-        final TextField fileNameFld = new TextField();
+        fileNameFld = new TextField();
         gridPane.add(fileNameFld, 1, 1);
-        final TextField imagePathFld = new TextField();
+        imagePathFld = new TextField();
         gridPane.add(imagePathFld, 1, 2);
         Button browseButton = new Button("Browse...");
         browseButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -78,7 +83,7 @@ class NewFileDialog extends Stage {
                 String imagePath = imagePathFld.getText();
                 if (!"".equalsIgnoreCase(fileName) && !"".equalsIgnoreCase(imagePath)) {
                     close();
-                    CertificateWrapper certificateWrapper = newFileDialog.createCertificateWrapper(fileName, imagePath);
+                    CertificateWrapper certificateWrapper = certificateUtils.createCertificateWrapper(fileName, imagePath);
 //                    newFileDialog.createNewTab(certificateWrapper).setFile(new File(fileName)); // create new tab and save path for later saving
                     newFileDialog.createNewTab(certificateWrapper);
                     //                        createNewTab(fileName, imagePath);
@@ -91,6 +96,14 @@ class NewFileDialog extends Stage {
         gridPane.add(finishButton, 1, 3);
         GridPane.setHalignment(finishButton, HPos.RIGHT);
         root.getChildren().add(gridPane);
+    }
+    private final TextField imagePathFld;
+    private final TextField fileNameFld;
+    
+    public NewFileDialog reset() {
+        fileNameFld.setText("");
+        imagePathFld.setText("");
+        return this;
     }
     
 }

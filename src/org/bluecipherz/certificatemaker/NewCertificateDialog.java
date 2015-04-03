@@ -35,6 +35,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
@@ -131,6 +133,15 @@ class NewCertificateDialog extends Stage {
                 box.getSelectionModel().select(0);
             } else {
                 TextField textField = new TextField();
+//                textField.setOnKeyPressed(new EventHandler<KeyEvent>() { // TODO focus traversal
+//                    @Override
+//                    public void handle(KeyEvent t) {
+//                        if(t.getCode() == KeyCode.ENTER) {
+//                            TextField tf = (TextField) t.getSource();
+//                            tf.
+//                        }
+//                    };
+//                });
                 gridPane.add(textField, 1, row);
                 dataHolders.add(textField); // save a copy for printing later
             }
@@ -204,6 +215,8 @@ class NewCertificateDialog extends Stage {
             BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
             ImageUtils.saveImage(createBufferedImage, saveFile.getAbsolutePath());
         } catch (FileNotFoundException ex) {
+            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
             Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
         }
         

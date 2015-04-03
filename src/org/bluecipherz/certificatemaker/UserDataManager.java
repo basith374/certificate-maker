@@ -4,7 +4,17 @@
  */
 package org.bluecipherz.certificatemaker;
 
+//import com.google.gson.Gson;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 
 /**
@@ -16,6 +26,8 @@ public class UserDataManager {
     private UserDataManager() { }
     
     private static Preferences prefs = Preferences.userNodeForPackage(UserDataManager.class);
+    
+//    private static Gson gson = new Gson();
     
     /************************
      * PERSISTENCE METHODS
@@ -185,6 +197,28 @@ public class UserDataManager {
         }
     }
     
+//    public static List<String> getRecentTemplates() {
+//        List<String> recentList = null;
+//        try {
+//            BufferedReader br = new BufferedReader(new FileReader("recent.json"));
+//            recentList = gson.fromJson(br, ArrayList.class);
+//        } catch (FileNotFoundException ex) {
+//            Logger.getLogger(UserDataManager.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        return recentList;
+//    }
+//    
+//    public static void setRecentTemplates(List<String> recentList) {
+//        String json = gson.toJson(recentList);
+//        try {
+//            FileWriter writer = new FileWriter("recent.json");
+//            writer.write(json);
+//            writer.close();
+//        } catch (IOException ex) {
+//            Logger.getLogger(UserDataManager.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        
+//    }
     // END PERSISTENCE METHODS
     
 }

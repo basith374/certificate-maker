@@ -20,6 +20,8 @@ public class CertificateFieldAdapter extends XmlAdapter<CertificateField, Certif
         CertificateField certificateField = new CertificateField(v.getX(), v.getY());
         if(v.getFieldType() == FieldType.IMAGE) {
             certificateField.setFieldType(FieldType.IMAGE);
+            certificateField.setWidth(v.getWidth());
+            certificateField.setHeight(v.getHeight());
         } else {
             certificateField.setFieldName(v.getFieldName());
             certificateField.setFieldType(v.getFieldType());
@@ -36,6 +38,8 @@ public class CertificateFieldAdapter extends XmlAdapter<CertificateField, Certif
         CertificateField certificateField = new CertificateField(v.getX(), v.getY());
         if(v.getFieldType() == FieldType.IMAGE) {
             certificateField.setFieldType(FieldType.IMAGE);
+            certificateField.setWidth(v.getWidth());
+            certificateField.setHeight(v.getHeight());
         } else {
             certificateField.setFieldName(v.getFieldName());
             certificateField.setFieldType(v.getFieldType());

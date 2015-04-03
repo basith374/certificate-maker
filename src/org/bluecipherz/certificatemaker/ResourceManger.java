@@ -74,7 +74,7 @@ public class ResourceManger {
         this.avatarx320 = new Image(getClass().getResourceAsStream("icons/avatarx320.png"));
         this.iconx16 = new Image(getClass().getResourceAsStream("icons/iconx16.png"));
         this.iconx32 = new Image(getClass().getResourceAsStream("icons/iconx32.png"));
-        this.iconx48 = new Image(getClass().getResourceAsStream("icons/iconx48.png"));
+//        this.iconx48 = new Image(getClass().getResourceAsStream("icons/iconx48.png")); // moved to splash
         this.errorx16 = new Image(getClass().getResourceAsStream("icons/errorx16.png"));
         this.errorx32 = new Image(getClass().getResourceAsStream("icons/errorx32.png"));
         this.errorx48 = new Image(getClass().getResourceAsStream("icons/errorx48.png"));
@@ -91,6 +91,7 @@ public class ResourceManger {
     
     public void loadSplashResource() {
         this.splash = new Image(getClass().getResourceAsStream("icons/splash.png"));
+        this.iconx48 = new Image(getClass().getResourceAsStream("icons/iconx48.png"));
     }
     
 }

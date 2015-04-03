@@ -141,7 +141,7 @@ public class ImageUtils {
     }
     
     // new Method, use this
-    public static BufferedImage createBufferedImage(Image image, HashMap<CertificateField, String> fields) throws FileNotFoundException {
+    public static BufferedImage createBufferedImage(Image image, HashMap<CertificateField, String> fields) throws FileNotFoundException, IOException {
         BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
         
         Graphics2D imageGraphics = (Graphics2D) bufferedImage.getGraphics();
@@ -159,6 +159,7 @@ public class ImageUtils {
             if(field.getKey().getFieldType() == FieldType.IMAGE) {
                 // draw avatar image
 //                imageGraphics.drawImage(new BufferedImage(), index, index, null);
+                imageGraphics.drawImage(ImageIO.read(new File(field.getValue())), null, field.getKey().getX(), field.getKey().getY());
             } else {
                 imageGraphics.setFont(new Font(field.getKey().getFontFamily(), field.getKey().getFontStyle(), field.getKey().getFontSize()));
                 imageGraphics.drawString(field.getValue(), field.getKey().getX(), field.getKey().getY());
