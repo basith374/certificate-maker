@@ -425,14 +425,20 @@ public class Window  {
                 System.out.println("recent box selected"); // debug
                 File file = new File(((ComboBox)t.getSource()).getSelectionModel().getSelectedItem().toString());
                 System.out.println("File : " + file.getAbsolutePath()); // debug
-                if(!isOpenedInGui(file)) openTemplateInGui(file);
+                if(!isOpenedInGui(file))
+                    if(file.exists()) {
+                        openTemplateInGui(file);
+                    } else {
+                        System.out.println("file doesnt exists. removing entry...");
+                        ((ComboBox)t.getSource()).getItems().remove(file.getAbsolutePath());
+                    }
             }
         });
         // event listeners for automatic data update
         recentTemplatesBox.getItems().addListener(new ListChangeListener() {
             @Override
             public void onChanged(ListChangeListener.Change change) {
-                System.out.println("recent item added"); // debug
+                System.out.println("recent items updated"); // debug
                 UserDataManager.setRecentTemplates(change.getList());
             }
         });

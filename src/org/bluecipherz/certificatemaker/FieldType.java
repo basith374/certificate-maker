@@ -11,7 +11,7 @@ package org.bluecipherz.certificatemaker;
 public enum FieldType {    
     // if you change this, add anything remove anything or order anything
     // also change references in Window.class LabelDialog.class and also field wrapper classes
-    TEXT("Text"), DATE("Date"), REGNO("Regno"), COURSE("Course"), IMAGE("Image");
+    TEXT("Text"), DATE("Date"), REGNO("Regno"), COURSE("Course"), COURSEDETAILS("Course Details"), IMAGE("Image");
 
     private String name;
     

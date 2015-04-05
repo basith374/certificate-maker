@@ -162,10 +162,10 @@ class NewCertificateDialog extends Stage {
             Label label;
             if(certificateField.getFieldType() == FieldType.TEXT){
                 label = new Label(certificateField.getFieldName());
-                System.out.println("Adding TEXT : " + certificateField.getFieldName());
+                System.out.println("Adding TEXT : " + certificateField.getFieldName()); // debug
             } else {
                 label = new Label(certificateField.getFieldType().toString());
-                System.out.println("Adding " + certificateField.getFieldType().toString());
+                System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
             }
             gridPane.add(label, 0, row);
             
@@ -176,12 +176,19 @@ class NewCertificateDialog extends Stage {
                 Button browseButton = getBrowseButton();
                 gridPane.add(browseButton, 2, row);
             } else if(certificateField.getFieldType() == FieldType.COURSE){
-                System.out.println("Loading courses : " + certificateField.getCourses().size());
+                System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
                 ComboBox<String> box = new ComboBox(list);
-                box.setOnKeyPressed(getActionTraverse());
+//                box.setOnAction(getComboActionTraverse()); // TODO action traverse
                 gridPane.add(box, 1, row);
                 dataHolders.add(box); // save a copy for printing later
+                box.getSelectionModel().select(0);
+            } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
+                ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
+                ComboBox<String> box = new ComboBox<>(list);
+//                box.setOnAction(getComboActionTraverse()); // TODO action traverse
+                gridPane.add(box, 1, row);
+                dataHolders.add(box);
                 box.getSelectionModel().select(0);
             } else {
                 TextField textField = new TextField();
@@ -244,7 +251,7 @@ class NewCertificateDialog extends Stage {
         String savename = "";
         int index = 0;
         for (CertificateField field : wrapper.getCertificateFields()) {
-            if (field.getFieldType() == FieldType.COURSE) {
+            if (field.getFieldType() == FieldType.COURSE || field.getFieldType() == FieldType.COURSEDETAILS) {
                 fields.put(field, ((ComboBox)dataHolders.get(index)).getSelectionModel().getSelectedItem().toString());
             } else {
                 TextField tf = (TextField)dataHolders.get(index);

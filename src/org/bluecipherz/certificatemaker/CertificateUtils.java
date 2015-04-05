@@ -65,6 +65,7 @@ public class CertificateUtils {
     
     
     /**
+     * UPDATE : This method has no formal use now, it just aligns
      * Converts a text object in a tab to a certificatefield object that encapsulates its data.
      * @param node
      * @return
@@ -73,22 +74,25 @@ public class CertificateUtils {
         CertificateText text = (CertificateText) node;
         int x = (int) text.getX();
         int y = (int) text.getY();
-        Font font = text.getFont();
-        int fontSize = (int) font.getSize(); // TODO do something
-        String fontFamily = font.getFamily();
-        String fontWeight = font.getStyle();
-        int fontStyle = (FontWeight.BOLD.toString().equalsIgnoreCase(fontWeight)) ? java.awt.Font.BOLD : java.awt.Font.PLAIN;
+//        Font font = text.getFont();
+//        int fontSize = (int) font.getSize(); // TODO do something
+//        String fontFamily = font.getFamily();
+//        String fontWeight = font.getStyle();
+//        int fontStyle = (FontWeight.BOLD.toString().equalsIgnoreCase(fontWeight)) ? java.awt.Font.BOLD : java.awt.Font.PLAIN;
         
         // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
         int middlex = (int) (x + text.getLayoutBounds().getWidth() / 2);
         int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
         
-        CertificateField field = new CertificateField(middlex, y);
+//        CertificateField field = new CertificateField(middlex, y);  // redundant
+        CertificateField field = text.getCertificateField();
+        field.setX(middlex);
+        field.setY(y);
 //        CertificateField field = new CertificateField(middlex, middley);
 //        CertificateField field = new CertificateField(x, y, text.getText(), fontSize, fontFamily, fontStyle);
-        field.setFieldType(text.getCertificateField().getFieldType());
-        if(field.getFieldType() == FieldType.TEXT) field.setFieldName(text.getText());
-        if(field.getFieldType() == FieldType.COURSE) field.setCourses(text.getCertificateField().getCourses()); // new fix , not sure about it. LIFE SAVER! BIG BUG KILLER!
+//        field.setFieldType(text.getCertificateField().getFieldType()); // redundant
+//        if(field.getFieldType() == FieldType.TEXT) field.setFieldName(text.getText());
+//        if(field.getFieldType() == FieldType.COURSE) field.setCourses(text.getCertificateField().getCourses()); // new fix , not sure about it. LIFE SAVER! BIG BUG KILLER!
 //        if(field.getFieldType() == FieldType.COURSE) { // debug
 //            System.out.println("converting to certificatefield :\nCourses : ");
 //            for(String s : field.getCourses()) {
@@ -96,9 +100,9 @@ public class CertificateUtils {
 //            }
 //            System.out.println("");
 //        }
-        field.setFontFamily(fontFamily);
-        field.setFontSize(fontSize);
-        field.setFontStyle(fontStyle);
+//        field.setFontFamily(fontFamily);
+//        field.setFontSize(fontSize);
+//        field.setFontStyle(fontStyle); 
         return field;
     }
     

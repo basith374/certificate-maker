@@ -26,6 +26,7 @@ public class CertificateField {
     private String fontFamily;
     private int fontStyle; // depending on java.awt.Font (eg. Font.BOLD, Font.PLAIN)
     private List<String> courses;
+    private List<String> coursesDetails;
     private int width;
     private int height;
 
@@ -90,6 +91,16 @@ public class CertificateField {
 //        System.out.println("setCourses() called"); // debug
         this.courses = courses;
     }
+
+    @XmlElement(name = "coursedetails")
+    public List<String> getCoursesDetails() {
+        return coursesDetails;
+    }
+
+    public void setCoursesDetails(List<String> coursesDetails) {
+        this.coursesDetails = coursesDetails;
+    }
+    
 
     public String getFieldName() {
         return fieldName;
