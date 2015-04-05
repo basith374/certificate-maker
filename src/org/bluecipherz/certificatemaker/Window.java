@@ -623,6 +623,7 @@ public class Window  {
     
     private Node getStatusBar() {
         statusBar = new HBox();
+        statusBar.setStyle("-fx-background-color: gainsboro");
         statusBar.setPadding(new Insets(2));
         statusBar.setSpacing(2);
         statusLabel = new Label("Status");

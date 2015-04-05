@@ -27,6 +27,8 @@ import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -91,6 +93,7 @@ class NewCertificateDialog extends Stage {
     });
     
     private IntegerProperty pendingTasks = new SimpleIntegerProperty();
+    private double FIELD_WIDTH = 150;
 
     public NewCertificateDialog(Stage parent, CertificateWrapper wrapper, final Window window) {
         super();
@@ -99,6 +102,7 @@ class NewCertificateDialog extends Stage {
         initOwner(parent);
         initModality(Modality.APPLICATION_MODAL);
         setTitle("Create new certificate");
+        getIcons().add(ResourceManger.getInstance().newx16);
         
         progressBar = window.getProgressBar();
         
@@ -126,6 +130,7 @@ class NewCertificateDialog extends Stage {
         
         Label savePathLabel = new Label("Save path : ");
         savePathField = new TextField();
+        savePathField.setPrefWidth(FIELD_WIDTH);
         Button savePathBtn = new Button("Browse...");
         
         gridPane.add(savePathLabel, 0, 0); // col, rows
@@ -161,16 +166,17 @@ class NewCertificateDialog extends Stage {
         for (CertificateField certificateField : wrapper.getCertificateFields()) {
             Label label;
             if(certificateField.getFieldType() == FieldType.TEXT){
-                label = new Label(certificateField.getFieldName());
+                label = new Label(certificateField.getFieldName() + " : ");
                 System.out.println("Adding TEXT : " + certificateField.getFieldName()); // debug
             } else {
-                label = new Label(certificateField.getFieldType().toString());
+                label = new Label(certificateField.getFieldType().toString() + " : ");
                 System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
             }
             gridPane.add(label, 0, row);
             
             if (certificateField.getFieldType() == FieldType.IMAGE) {
                 avatarPathField = new TextField();
+                avatarPathField.setPrefWidth(FIELD_WIDTH);
                 gridPane.add(avatarPathField, 1, row);
                 dataHolders.add(avatarPathField); // save a copy for printing later
                 Button browseButton = getBrowseButton();
@@ -179,6 +185,7 @@ class NewCertificateDialog extends Stage {
                 System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
                 ComboBox<String> box = new ComboBox(list);
+                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
 //                box.setOnAction(getComboActionTraverse()); // TODO action traverse
                 gridPane.add(box, 1, row);
                 dataHolders.add(box); // save a copy for printing later
@@ -186,13 +193,22 @@ class NewCertificateDialog extends Stage {
             } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
                 ComboBox<String> box = new ComboBox<>(list);
+                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
 //                box.setOnAction(getComboActionTraverse()); // TODO action traverse
                 gridPane.add(box, 1, row);
                 dataHolders.add(box);
                 box.getSelectionModel().select(0);
+            } else if(certificateField.getFieldType() == FieldType.TEXT){
+//                TextField textField = new TextField();
+                ComboBox<String> textField = new ComboBox<>();
+                if(textField.getPrefWidth() < FIELD_WIDTH) textField.setPrefWidth(FIELD_WIDTH);
+                textField.setEditable(true);
+//                textField.widthProperty().
+                textField.setOnKeyPressed(getActionTraverse());
+                gridPane.add(textField, 1, row);
+                dataHolders.add(textField); // save a copy for printing later
             } else {
                 TextField textField = new TextField();
-//                ComboBox textField = new ComboBox();
                 textField.setOnKeyPressed(getActionTraverse());
                 gridPane.add(textField, 1, row);
                 dataHolders.add(textField); // save a copy for printing later
@@ -252,7 +268,7 @@ class NewCertificateDialog extends Stage {
         String savename = "";
         int index = 0;
         for (CertificateField field : wrapper.getCertificateFields()) {
-            if (field.getFieldType() == FieldType.COURSE || field.getFieldType() == FieldType.COURSEDETAILS) {
+            if (field.getFieldType() == FieldType.COURSE || field.getFieldType() == FieldType.COURSEDETAILS || field.getFieldType() == FieldType.TEXT) {
                 fields.put(field, ((ComboBox)dataHolders.get(index)).getSelectionModel().getSelectedItem().toString());
             } else {
                 TextField tf = (TextField)dataHolders.get(index);
@@ -397,11 +413,15 @@ class NewCertificateDialog extends Stage {
                 TextField tf = (TextField) node;
                 if(field.getFieldType() == FieldType.IMAGE) {
                     tf.setText("");
-                } else if(field.getFieldType() == FieldType.TEXT) {
-                    if(!field.isRepeating()) tf.setText(""); // new text repeating implementation
-                    // 
                 } else if(field.getFieldType() == FieldType.REGNO) {
                     tf.setText(regexUtils.incrementRegno(tf.getText()));
+                }
+            } else if(node instanceof ComboBox) {
+                ComboBox box = (ComboBox) node;
+                if(field.getFieldType() == FieldType.TEXT) {
+                    box.getItems().add(box.getSelectionModel().getSelectedItem());
+                    if(!box.getItems().contains("")) box.getItems().add(0, "");
+                    box.getSelectionModel().select(0);
                 }
             }
             index++;
