@@ -19,6 +19,7 @@ import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -82,6 +83,8 @@ class LabelDialog extends Stage {
     private EventHandler<ActionEvent> listViewEventHandler = new ListViewButtonHandler();
     private final ListView desclist;
     private Label coursesDetailsLabel;
+    private CheckBox repeatCheckBox;
+    private Label repeatingLabel;
 
     public LabelDialog(Stage owner, final Window window) {
         super();
@@ -229,6 +232,10 @@ class LabelDialog extends Stage {
         gridPane.add(fieldTypeBox, 1, 1);
         textField = new TextField();
         gridPane.add(textField, 1, 2, 1, 2); // col, row, colspan, rowspan
+        repeatingLabel = new Label("Repeating");
+        gridPane.add(repeatingLabel, 2, 2);
+        repeatCheckBox = new CheckBox();
+        gridPane.add(repeatCheckBox, 3, 2);
         fontFamilyBox = new ComboBox(window.getFontFamilyList()); // dependency
         gridPane.add(fontFamilyBox, 1, 4);
         fontFamilyBox.getSelectionModel().select(0);
@@ -287,6 +294,8 @@ class LabelDialog extends Stage {
         if(category != FieldType.TEXT) {
             gridPane.add(textLabel, 0, 2, 1, 2); // col, row, colspan, rowspan
             gridPane.add(textField, 1, 2, 1, 2); // col, row, colspan, rowspan
+            gridPane.add(repeatingLabel, 2, 2);
+            gridPane.add(repeatCheckBox, 3, 2);
         }
         category = FieldType.TEXT;
     }
@@ -308,6 +317,8 @@ class LabelDialog extends Stage {
     private void removeTextItems() {
         gridPane.getChildren().remove(textLabel);
         gridPane.getChildren().remove(textField);
+        gridPane.getChildren().remove(repeatingLabel);
+        gridPane.getChildren().remove(repeatCheckBox);
     }
     
     /**
@@ -336,7 +347,10 @@ class LabelDialog extends Stage {
         certificateField.setFontStyle(fontStyle);
         
         // other conditions
-        if(field_type == FieldType.TEXT) certificateField.setFieldName(textField.getText());
+        if(field_type == FieldType.TEXT) {
+            certificateField.setFieldName(textField.getText());
+            certificateField.setRepeating(repeatCheckBox.isSelected());
+        }
         if(field_type == FieldType.COURSE) certificateField.setCourses(list.getItems());
         if(field_type == FieldType.COURSEDETAILS) certificateField.setCoursesDetails(desclist.getItems());
         
@@ -383,9 +397,13 @@ class LabelDialog extends Stage {
 //        fontSizeBox.getSelectionModel().select(subjectText.getFont().getSize());
 //        fontFamilyBox.getSelectionModel().select(subjectText.getFont().getStyle());
         
-        if(subjectText.getCertificateField().getFieldType() == FieldType.TEXT) textField.setText(subjectText.getText());
-        if(subjectText.getCertificateField().getFieldType() == FieldType.COURSE) {
+        if(subjectText.getCertificateField().getFieldType() == FieldType.TEXT) {
+            textField.setText(subjectText.getText());
+            repeatCheckBox.setSelected(subjectText.getCertificateField().isRepeating());
+        } else if(subjectText.getCertificateField().getFieldType() == FieldType.COURSE) {
             if(list.getItems().isEmpty()) list.getItems().addAll(subjectText.getCertificateField().getCourses());
+        } else if(subjectText.getCertificateField().getFieldType() == FieldType.COURSEDETAILS) {
+            if(desclist.getItems().isEmpty()) desclist.getItems().addAll(subjectText.getCertificateField().getCoursesDetails());
         }
 //        setDefaultFieldValues();
         button.setOnAction(editOkAction);
@@ -400,6 +418,7 @@ class LabelDialog extends Stage {
                 fieldTypeBox.getSelectionModel().select(0);
             }
         });
+        repeatCheckBox.setSelected(false); // dont know if this is necessary. just to make sure
         String fontFamily = UserDataManager.getDefaultFontFamily();
         if (fontFamily != null) {
             fontFamilyBox.getSelectionModel().select(window.getFontFamilyList().indexOf(fontFamily));

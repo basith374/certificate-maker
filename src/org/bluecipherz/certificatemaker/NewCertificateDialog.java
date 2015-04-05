@@ -192,6 +192,7 @@ class NewCertificateDialog extends Stage {
                 box.getSelectionModel().select(0);
             } else {
                 TextField textField = new TextField();
+//                ComboBox textField = new ComboBox();
                 textField.setOnKeyPressed(getActionTraverse());
                 gridPane.add(textField, 1, row);
                 dataHolders.add(textField); // save a copy for printing later
@@ -262,7 +263,13 @@ class NewCertificateDialog extends Stage {
         }
         
         
-        File saveFile = new File(savePathField.getText() + File.separatorChar + savename.substring(0, savename.lastIndexOf("/")));
+        File saveFile;
+        if(savename.contains("/")) {
+            // remove slash and every character after slash because windows doesnt support slashes in filenames
+            saveFile = new File(savePathField.getText() + File.separatorChar + savename.substring(0, savename.lastIndexOf("/")));
+        } else {
+            saveFile = new File(savePathField.getText() + File.separatorChar + savename);
+        }
         System.out.println("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
 
         saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension
@@ -388,8 +395,11 @@ class NewCertificateDialog extends Stage {
             Node node = dataHolders.get(index);
             if(node instanceof TextField) {
                 TextField tf = (TextField) node;
-                if(field.getFieldType() == FieldType.IMAGE || field.getFieldType() == FieldType.TEXT) {
+                if(field.getFieldType() == FieldType.IMAGE) {
                     tf.setText("");
+                } else if(field.getFieldType() == FieldType.TEXT) {
+                    if(!field.isRepeating()) tf.setText(""); // new text repeating implementation
+                    // 
                 } else if(field.getFieldType() == FieldType.REGNO) {
                     tf.setText(regexUtils.incrementRegno(tf.getText()));
                 }

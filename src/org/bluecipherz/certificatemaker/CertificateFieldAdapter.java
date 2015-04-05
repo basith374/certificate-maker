@@ -28,6 +28,7 @@ public class CertificateFieldAdapter extends XmlAdapter<CertificateField, Certif
             certificateField.setFontFamily(v.getFontFamily());
             certificateField.setFontSize(v.getFontSize());
             certificateField.setFontStyle(v.getFontStyle());
+            if(v.getFieldType() == FieldType.TEXT) certificateField.setRepeating(v.isRepeating());
             if(v.getFieldType() == FieldType.COURSE) certificateField.setCourses(v.getCourses()); // important!
             if(v.getFieldType() == FieldType.COURSEDETAILS) certificateField.setCoursesDetails(v.getCoursesDetails());
         }
@@ -47,6 +48,7 @@ public class CertificateFieldAdapter extends XmlAdapter<CertificateField, Certif
             certificateField.setFontFamily(v.getFontFamily());
             certificateField.setFontSize(v.getFontSize());
             certificateField.setFontStyle(v.getFontStyle());
+            if(v.getFieldType() == FieldType.TEXT) certificateField.setRepeating(v.isRepeating());
             if(v.getFieldType() == FieldType.COURSE) certificateField.setCourses(v.getCourses()); // important!
             if(v.getFieldType() == FieldType.COURSEDETAILS) certificateField.setCoursesDetails(v.getCoursesDetails());
         }

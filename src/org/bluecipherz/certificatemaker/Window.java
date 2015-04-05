@@ -78,6 +78,7 @@ public class Window  {
     private static LabelDialog LABEL_DIALOG;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
     private static ImageSizeDialog IMAGESIZEDIALOG;
+    private static AboutDialog ABOUT_DIALOG;
     
     private BorderPane borderPane;
     private static TabPane tabPane;
@@ -371,7 +372,10 @@ public class Window  {
 //                    showTheRealThing();
 //                    flaut();
 //                    blowupcomputer();
-//                    new AboutDialog(PRIMARY_STAGE);
+                    if(ABOUT_DIALOG == null) {
+                        ABOUT_DIALOG = new AboutDialog(PRIMARY_STAGE);
+                    }
+                    ABOUT_DIALOG.show();
                 }
             }
         };
@@ -405,7 +409,7 @@ public class Window  {
         ToolBar toolBar = new ToolBar();
 
 
-        Label recentTemplatesLbl = new Label("Recent :");
+        Label recentTemplatesLbl = new Label("Recent templates :");
         toolBar.getItems().add(recentTemplatesLbl);
         
         List<String> recent = UserDataManager.getRecentTemplates();
@@ -465,7 +469,7 @@ public class Window  {
         Separator separator = new Separator(Orientation.VERTICAL);
         toolBar.getItems().add(separator);
 
-        Label fontsLbl = new Label("Font : ");
+        Label fontsLbl = new Label("Default Font : ");
         fontFamilyList = FXCollections.observableArrayList(
                 GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()
         );

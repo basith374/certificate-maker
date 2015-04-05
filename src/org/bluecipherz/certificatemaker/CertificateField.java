@@ -29,6 +29,15 @@ public class CertificateField {
     private List<String> coursesDetails;
     private int width;
     private int height;
+    private boolean repeating;
+
+    public boolean isRepeating() {
+        return repeating;
+    }
+
+    public void setRepeating(boolean repeating) {
+        this.repeating = repeating;
+    }
 
     public int getWidth() {
         return width;
