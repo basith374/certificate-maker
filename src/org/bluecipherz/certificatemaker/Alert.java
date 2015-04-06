@@ -9,6 +9,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -48,52 +49,59 @@ public class Alert extends Stage {
      */
     public Alert(Stage primaryStage, String title, String message, AlertType alertType) {
         initOwner(primaryStage);
-        initModality(Modality.NONE);
+        initModality(Modality.WINDOW_MODAL);
         setTitle(title);
         
         infoImage.setImage(ResourceManger.getInstance().infox32);
         warnImage.setImage(ResourceManger.getInstance().warnx32);
         errorImage.setImage(ResourceManger.getInstance().errorx32);
         
-        BorderPane borderPane = new BorderPane();
+//        BorderPane borderPane = new BorderPane();
+        GridPane gridPane = new GridPane();
+        gridPane.setPadding(new Insets(15));
         
-        HBox hbox = new HBox();
-        hbox.setPadding(new Insets(10));
-//        gridPane.setHgap(5);
-//        gridPane.setVgap(5);
+//        HBox hbox = new HBox();
+//        hbox.setPadding(new Insets(10));
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
         if(alertType == AlertType.INFO) {
-//            gridPane.add(infoImage, 0, 0);
-            hbox.getChildren().add(infoImage);
+            gridPane.add(infoImage, 0, 0);
+            getIcons().add(ResourceManger.getInstance().infox16);
+//            hbox.getChildren().add(infoImage);
         } else if(alertType == AlertType.WARN) {
-//            gridPane.add(warnImage, 0, 0);
-            hbox.getChildren().add(infoImage);
+            gridPane.add(warnImage, 0, 0);
+            getIcons().add(ResourceManger.getInstance().warnx16);
+//            hbox.getChildren().add(infoImage);
         } else if(alertType == AlertType.ERROR) {
-//            gridPane.add(errorImage, 0, 0);
-            hbox.getChildren().add(infoImage);
+            gridPane.add(errorImage, 0, 0);
+            getIcons().add(ResourceManger.getInstance().errorx16);
+//            hbox.getChildren().add(infoImage);
         }
         
         Label label = new Label(message);
-//        gridPane.add(label, 1, 0); // column, row
-        hbox.getChildren().add(label);
-        hbox.setAlignment(Pos.CENTER);
-        HBox.setMargin(label, new Insets(15));
+        gridPane.add(label, 1, 0); // column, row, colspan, rowspan
+        GridPane.setValignment(label, VPos.CENTER);
+//        hbox.getChildren().add(label);
+//        hbox.setAlignment(Pos.CENTER);
+//        HBox.setMargin(label, new Insets(15));
         
 //        GridPane.setHalignment(label, HPos.CENTER);
-        HBox hbox2 = new HBox();
         Button okButton = new Button("OK");
+        gridPane.add(okButton, 0, 1, 2, 1); // column, row, colspan, rowspan
+        GridPane.setHalignment(okButton, HPos.RIGHT);
         okButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
                 close();
             }
         });
-        hbox2.getChildren().add(okButton);
-        hbox2.setAlignment(Pos.CENTER_RIGHT);
         
-        borderPane.setTop(hbox);
-        borderPane.setCenter(hbox2);
+//        borderPane.setTop(hbox);
+//        borderPane.setCenter(okButton);
         
-        Scene scene = new Scene(borderPane, Color.WHITE);
+        
+//        Scene scene = new Scene(borderPane, Color.WHITE);
+        Scene scene = new Scene(gridPane, Color.WHITE);
         setScene(scene);
         sizeToScene();
         show();

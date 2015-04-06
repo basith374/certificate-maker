@@ -56,6 +56,8 @@ import javafx.collections.ObservableMap;
 import javafx.concurrent.Task;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -94,6 +96,7 @@ public class Window  {
     private ProgressBar progressBar;
     private Label statusLabel;
     private HBox statusBar;
+    private Label messageLabel;
 
     private TextField getTextField(FileChooser fileChooser) {
         LinkedList<Object> queue = new LinkedList<>();
@@ -474,12 +477,19 @@ public class Window  {
                 GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames()
         );
 //        ComboBox templates = new ComboBox(templateList);
-        final ComboBox systemFonts = new ComboBox(fontFamilyList);
+        final ComboBox<String> systemFonts = new ComboBox<>(fontFamilyList);
         // reduce load on gui
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
-                systemFonts.getSelectionModel().select(0);
+//                String fontFamily = UserDataManager.getDefaultFontFamily();
+                String fontFamily = UserDataManager.getDefaultFontFamily();
+                if(fontFamily != null) {
+                    if(systemFonts.getItems().contains(this)) systemFonts.getSelectionModel().select(fontFamily);
+                    else systemFonts.getSelectionModel().select(0);
+                } else {
+                    systemFonts.getSelectionModel().select(0);
+                }
             }
         });
         
@@ -496,12 +506,17 @@ public class Window  {
                 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
                 51, 52, 53, 54, 56, 57, 58, 59, 60, 61, 62, 63, 64
         );
-        final ComboBox fontSizes = new ComboBox(fontSizeList);
+        final ComboBox<Integer> fontSizes = new ComboBox<>(fontSizeList);
         // reduce load on gui
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
-                fontSizes.getSelectionModel().select(11);
+                Integer fontSize = Integer.parseInt(UserDataManager.getDefaultFontSize());
+                if(fontSize != null) {
+                    fontSizes.getSelectionModel().select(fontSize);
+                } else {
+                    fontSizes.getSelectionModel().select(5);
+                }
             }
         });
         fontSizes.setOnAction(new EventHandler<ActionEvent>() {
@@ -515,19 +530,24 @@ public class Window  {
         fontStyleList = FXCollections.observableArrayList(
                 "Plain", "Bold"
         );
-        final ComboBox fontStyles = new ComboBox(fontStyleList);
+        final ComboBox<String> fontStyles = new ComboBox<>(fontStyleList);
         // reduce load on gui
         Platform.runLater(new Runnable() {
             @Override
             public void run() {
-                fontStyles.getSelectionModel().select(0);
+                String fontStyle = UserDataManager.getDefaultFontStyle();
+                if(fontStyle != null) {
+                    fontStyles.getSelectionModel().select(fontStyle);
+                } else {
+                    fontStyles.getSelectionModel().select(0);
+                }
             }
         });
         fontStyles.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
 //                System.out.println("changed");
-                UserDataManager.setDefaultFontStyle(fontStyles.getSelectionModel().getSelectedItem().toString());
+                UserDataManager.setDefaultFontStyle(fontStyles.getSelectionModel().getSelectedItem());
             }
         });
 
@@ -550,60 +570,39 @@ public class Window  {
             fontStyles.getSelectionModel().select(fontStyleList.indexOf(fontStyle));
         }
 
-        Button toolButton1 = new Button("New{beta}"); // test, no use yet
-        Button toolButton2 = new Button("Open{beta}"); // test, no use yet
-        Button toolButton3 = new Button("Load Image{test}"); // test, no use yet
-        Button toolButton4 = new Button("New Certificate{test}"); // test, no use yet
-
-//        toolBar.getItems().add(toolButton1); // temporarily removed
-//        toolBar.getItems().add(toolButton2); // temporarily removed
-//        toolBar.getItems().add(toolButton3); // temporarily removed
-//        toolBar.getItems().add(toolButton4); // temporarily removed
-
-//        toolButton1.setOnAction(handler);
-//        toolButton2.setOnAction(handler);
-        toolButton3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-//                createNewTab("Test", "/home/bazi/Pictures/me/0.jpg");
-                String title = "Test0";
-//                Pattern digitPattern = Pattern.compile("(\\d+)");
-//                Matcher matcher;
-//                for (Tab tab : tabPane.getTabs()) {
-//                    if (title.equals(tab.getText())) {
-//                        matcher = digitPattern.matcher(title);
-//                        StringBuffer result = new StringBuffer();
-//                        matcher.appendReplacement(result, String.valueOf(Integer.parseInt(matcher.group(1)) + 1));
-//                        matcher.appendTail(result);
-//                        title = result.toString();
-//                        System.out.println("title: " + title);
-//                    }
-//                }
-//                CertificateWrapper certificateWrapper = createCertificateWrapper(title, "/home/bazi/Pictures/me/0.jpg");
-//                CertificateWrapper certificateWrapper = createCertificateWrapper(title, "C:\\Documents and Settings\\All Users\\Documents\\My Pictures\\Sample Pictures\\Sunset.jpg");
-//                org.bluecipherz.certificatemaker.CertificateWrapper certificateWrapper = createCertificateWrapper("Test", "/home/bazi/Pictures/me/0.jpg");
-//                createNewTab(certificateWrapper);
-            }
-        });
-        toolButton4.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                CertificateWrapper certificateWrapper = certificateUtils.openTemplate(getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "", null));
-                createNewCertficateDialog(PRIMARY_STAGE, certificateWrapper);
-            }
-        });
-
         return toolBar;
     }
 
     /*
-     * STATUS BAR AND PROGRESS BAR
+     * STATUS BAR
      */
     
-    public void updateStatusLabel(String status) {
-        statusLabel.setText(status);
+    private Node getStatusBar() {
+        statusBar = new HBox();
+        statusBar.setStyle("-fx-background-color: gainsboro;");
+//        statusBar.setStyle("-fx-background-color: linear-gradient(to bottom, -fx-base, derive(-fx-base, 100%));");
+        statusBar.setPadding(new Insets(2));
+        statusBar.setSpacing(2);
+        statusBar.setAlignment(Pos.CENTER_LEFT);
+        
+        progressBar = new ProgressBar();
+        statusLabel = new Label("Status");
+        statusBar.getChildren().add(statusLabel);
+        statusBar.getChildren().add(new Separator(Orientation.VERTICAL));
+        messageLabel = new Label();
+        
+        return statusBar;
+    }
+    /*** END GUI INITIALIZER METHODS ***/
+    
+    public Label getMessageLabel() {
+        return messageLabel;
     }
     
+    public void addMessageLabel() {
+        statusBar.getChildren().add(messageLabel);
+    }
+        
     public void addProgressBar() {
         statusBar.getChildren().add(0, progressBar);
     }
@@ -620,18 +619,10 @@ public class Window  {
     public void removeProgressBar() {
         statusBar.getChildren().remove(progressBar);
     }
-    
-    private Node getStatusBar() {
-        statusBar = new HBox();
-        statusBar.setStyle("-fx-background-color: gainsboro");
-        statusBar.setPadding(new Insets(2));
-        statusBar.setSpacing(2);
-        statusLabel = new Label("Status");
-        statusBar.getChildren().add(statusLabel);
-        progressBar = new ProgressBar();
-        return statusBar;
+
+    public Label getStatusLabel() {
+        return statusLabel;
     }
-    /*** END GUI INITIALIZER METHODS ***/
     
     /*** cursor related methods ***/
     private void setCursorIconForAllTextAtTab(Tab tab, Cursor imageCursor) {
@@ -715,10 +706,9 @@ public class Window  {
 //        CertificateWrapper wrapper = certificateList.get(index);
         CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
         int index = tabPane.getSelectionModel().getSelectedIndex();
-        String tabTitle = tab.getText();
         if(index != -1) {// do the rest
             if (tab.getFile() == null) {
-                File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template", tabTitle);
+                File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template", tab.getText());
                 certificateUtils.saveFileAtTab(tab, file);
                 tab.setFile(file); // TODO change filepath to tabs
                 if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent

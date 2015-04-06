@@ -81,18 +81,8 @@ class NewCertificateDialog extends Stage {
     private TextField avatarPathField;
     private GridPane gridPane;
     
-    private final ProgressBar progressBar;
+    private final ImageWriterService iws;
     
-    private ExecutorService exec = Executors.newSingleThreadExecutor(new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return t;
-        }
-    });
-    
-    private IntegerProperty pendingTasks = new SimpleIntegerProperty();
     private double FIELD_WIDTH = 150;
 
     public NewCertificateDialog(Stage parent, CertificateWrapper wrapper, final Window window) {
@@ -103,19 +93,18 @@ class NewCertificateDialog extends Stage {
         initModality(Modality.APPLICATION_MODAL);
         setTitle("Create new certificate");
         getIcons().add(ResourceManger.getInstance().newx16);
-        
-        progressBar = window.getProgressBar();
+        iws = new ImageWriterService(window);
         
         regexUtils = new RegexUtils();
         certificateUtils = new CertificateUtils();
         
         this.wrapper = wrapper;
         this.certificateImage = new Image(wrapper.getCertificateImage().toURI().toString());
-        //            org.bluecipherz.certificatemaker.Window.this.createNewTab(wrapper);
+        
         fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
         fileChooser.getExtensionFilters().add(extFilter);
-        gridPane = createEntryFieldsandLabels(wrapper); // null pointer source
+        gridPane = createEntryFieldsandLabels(wrapper); // MEGA FUNCTION
         Scene scene = new Scene(gridPane, Color.WHITE);
         setScene(scene);
         sizeToScene();
@@ -290,24 +279,9 @@ class NewCertificateDialog extends Stage {
 
         saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension
 //        progressiveSave(fields, saveFile);
-        Task task = createWorker(fields, saveFile);
-        task.setOnSucceeded(new EventHandler() {
-            @Override
-            public void handle(Event t) {
-                pendingTasks.set(pendingTasks.get() - 1);
-                if(pendingTasks.get() > 0) {
-                    window.updateStatusLabel("Tasks : " + pendingTasks.get());
-                } else {
-                    window.removeProgressBar();
-                    window.updateStatusLabel("All tasks done.");
-                }
-            }
-        });
-        pendingTasks.set(pendingTasks.get() + 1);
-        if(!window.isProgressBarAdded()) window.addProgressBar();
-        window.getProgressBar().progressProperty().bind(task.progressProperty());
-        window.updateStatusLabel("Tasks : " + pendingTasks.get());
-        exec.submit(task);
+        
+        iws.takeWork(certificateImage, fields, saveFile);
+        
 //        try {
 //            BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
 //            System.out.println("created buffered image...");
@@ -325,6 +299,7 @@ class NewCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER) {
+                    System.out.println("KeyCode.ENTER");
                     Node n = (Node) t.getSource();
                     n.impl_traverse(Direction.NEXT);
                 }
@@ -332,67 +307,6 @@ class NewCertificateDialog extends Stage {
         };
     }
 
-    private HashMap<FieldType, CertificateField> populateHashMap(CertificateWrapper wrapper) {
-        HashMap<FieldType, CertificateField> collected = new HashMap<>();
-        for(CertificateField cf : wrapper.getCertificateFields()) {
-            collected.put(cf.getFieldType(), cf);
-        }
-        return collected;
-    }
-
-    private ArrayList<CertificateField> orderFields(ArrayList<CertificateField> certificateFields) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    class ImageWriteProgressListener implements IIOWriteProgressListener {
-
-//        private Task task;
-//        
-//        public ImageWriteProgressListener(Task task) {
-//            this.task = task;
-//        }
-        
-        
-        public ImageWriteProgressListener() {
-            
-        }
-        
-        @Override
-        public void imageStarted(ImageWriter source, int imageIndex) {
-            System.out.println("Image #" + imageIndex + " started " + source);
-        }
-
-        @Override
-        public void imageProgress(ImageWriter source, float percentageDone) {
-            System.out.println("Image progress " + source + ": " + percentageDone + "%");
-        }
-
-        @Override
-        public void imageComplete(ImageWriter source) {
-            System.out.println("Image Completed " + source);
-        }
-
-        @Override
-        public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {
-//            System.out.println("Thumbnail progress " + source + ", " + thumbnailIndex + " of" + imageIndex);
-        }
-
-        @Override
-        public void thumbnailProgress(ImageWriter source, float percentageDone) {
-//            System.out.println("Thumbnail started " + source + ": " + percentageDone + "%");
-        }
-
-        @Override
-        public void thumbnailComplete(ImageWriter source) {
-//            System.out.println("Thumbnail complete " + source);
-        }
-
-        @Override
-        public void writeAborted(ImageWriter source) {
-//            System.out.println("Write aborted " + source);
-        }
-        
-    }
     
     private boolean isFieldsFilled() {
         boolean filled = true;
@@ -417,80 +331,16 @@ class NewCertificateDialog extends Stage {
                     tf.setText(regexUtils.incrementRegno(tf.getText()));
                 }
             } else if(node instanceof ComboBox) {
-                ComboBox box = (ComboBox) node;
+                ComboBox<String> box = (ComboBox) node;
                 if(field.getFieldType() == FieldType.TEXT) {
-                    box.getItems().add(box.getSelectionModel().getSelectedItem());
+                    String item = box.getSelectionModel().getSelectedItem();
+                    if(!box.getItems().contains(item)) box.getItems().add(item); // save history
                     if(!box.getItems().contains("")) box.getItems().add(0, "");
-                    box.getSelectionModel().select(0);
+                    box.getSelectionModel().select(0); // reset value
                 }
             }
             index++;
         }
-    }
-    
-    public void progressiveSave(HashMap<CertificateField, String> fields, File saveFile) {
-        try {
-            // write certificate image
-            BufferedImage bufferedImage = ImageUtils.createBufferedImage(certificateImage, fields); // IMPORTANT
-            FileOutputStream fos = new FileOutputStream(saveFile);
-            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
-            ImageWriter writer = writers.next();
-            ImageOutputStream ios = ImageIO.createImageOutputStream(fos);
-            writer.setOutput(ios);
-            writer.addIIOWriteProgressListener(new ImageWriteProgressListener());
-            writer.write(bufferedImage);
-            writer.dispose();
-            ios.close();
-            fos.close();
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    
-    public Task createWorker(final HashMap<CertificateField, String> fields, final File saveFile) {
-        return new Task() {
-            @Override
-            protected Object call() throws Exception {
-                BufferedImage bufferedImage = ImageUtils.createBufferedImage(certificateImage, fields); // IMPORTANT
-                FileOutputStream fos = new FileOutputStream(saveFile);
-                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
-                ImageWriter writer = writers.next(); 
-                ImageOutputStream ios = ImageIO.createImageOutputStream(fos);
-                writer.setOutput(ios);
-                writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
-
-                    @Override
-                    public void imageStarted(ImageWriter source, int imageIndex) {}
-
-                    @Override
-                    public void imageProgress(ImageWriter source, float percentageDone) {
-                        updateProgress(percentageDone, 100);
-                    }
-
-                    @Override
-                    public void imageComplete(ImageWriter source) {}
-
-                    @Override
-                    public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
-
-                    @Override
-                    public void thumbnailProgress(ImageWriter source, float percentageDone) {}
-
-                    @Override
-                    public void thumbnailComplete(ImageWriter source) {}
-
-                    @Override
-                    public void writeAborted(ImageWriter source) {}
-                });
-                writer.write(bufferedImage);
-                writer.dispose();
-                ios.close();
-                fos.close();
-                return true;
-            }
-        };        
     }
     
 
@@ -502,8 +352,10 @@ class NewCertificateDialog extends Stage {
 //                dirChooser.setInitialDirectory();
                 dirChooser.setTitle("Set save path");
                 File file = dirChooser.showDialog(primaryStage);
-                savePathField.setText(file.getAbsolutePath());
-                UserDataManager.setCertificateSavePath(file);
+                if(file != null) {
+                    savePathField.setText(file.getAbsolutePath());
+                    UserDataManager.setCertificateSavePath(file);
+                }
             }
         };
     }
