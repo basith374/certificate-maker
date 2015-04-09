@@ -52,6 +52,17 @@ public class CertificateWrapper {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        CertificateWrapper wrapper = (CertificateWrapper) obj;
+        if(wrapper.name == null ? this.name != null : !wrapper.name.equals(this.name)) return false;
+        if(!wrapper.certificateImage.equals(this.certificateImage)) return false;
+        if(wrapper.getCertificateFields().size() != certificateFields.size()) return false;
+        System.out.println("wrapper fields : " + certificateFields.size() + ", targetfields : " + wrapper.getCertificateFields().size());
+        // more deep checking
+        return true;
+    }
+    
+    @Override
     public String toString() {
 //        return super.toString();
         String output = "{";

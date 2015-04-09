@@ -173,10 +173,10 @@ public class CertificateUtils {
      * @param index
      * @param file 
      */
-    public void saveFileAtTab(CertificateTab tab, File file) {
+    public CertificateWrapper saveFileAtTab(CertificateTab tab, File file) {
         ScrollPane scrollPane = (ScrollPane) tab.getContent();
         Group group = (Group) scrollPane.getContent();
-        CertificateWrapper wrapper = tab.getCertificateWrapper(); // TODO change certificatelist to tabs
+        CertificateWrapper wrapper = tab.getCertificateWrapper();
         ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
         wrapper.setCertificateFields(certificateFieldList);
         System.out.println("populated wrapper :" + wrapper);
@@ -184,6 +184,7 @@ public class CertificateUtils {
         tab.setChanged(false);
 //        tab.setFile(file); // done at an upper level
         UserDataManager.setLastActivityPath(file);
+        return wrapper;
     }
 
     /**
@@ -274,7 +275,7 @@ public class CertificateUtils {
      * @param file
      * @return 
      */
-    public File correctPngExtension(File file) {
+    public File correctPNGExtension(File file) {
         String path = file.getAbsolutePath();
         if(!path.endsWith(".png") || !path.endsWith(".jpg")) {
             path = path.concat(".png");
@@ -282,4 +283,12 @@ public class CertificateUtils {
         return new File(path);
     }
 
+    public File correctJPGExtension(File file) {
+        String path = file.getAbsolutePath();
+        if(!path.endsWith(".png") || !path.endsWith(".jpg")) {
+            path = path.concat(".jpg");
+        }
+        return new File(path);
+    }
+    
 }

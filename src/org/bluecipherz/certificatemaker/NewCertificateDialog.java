@@ -25,7 +25,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
+import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -33,7 +35,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -44,12 +45,15 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -66,9 +70,10 @@ import javax.imageio.stream.ImageOutputStream;
  * @author bazi
  */
 class NewCertificateDialog extends Stage {
-    private final CertificateWrapper wrapper; // no use yet
+//    private final CertificateWrapper wrapper; // no use yet
     private final Stage primaryStage;
-    private final Image certificateImage;
+    private Image certificateImage;
+    private CertificateWrapper wrapper;
     private File avatarImage;
     private final Window window; // no use yet
     private RegexUtils regexUtils;
@@ -80,37 +85,84 @@ class NewCertificateDialog extends Stage {
     private TextField savePathField;
     private TextField avatarPathField;
     private GridPane gridPane;
+    private EventHandler<? super KeyEvent> actionTraverse = getActionTraverse();
+    private EventHandler<ActionEvent> actionComboTraverse = getComboActionTraverse();
+    private EventHandler<KeyEvent> enterKeyAction = getEnterKeyAction();
     
     private final ImageWriterService iws;
     
     private double FIELD_WIDTH = 150;
+    private ProgressIndicator indicator;
+    
+    private ReadOnlyDoubleWrapper populatingProgress = new ReadOnlyDoubleWrapper(0);
+    private Scene scene;
+    private final EventHandler<ActionEvent> buttonAction;
+    private Button finishButton;
+    private Button nextButton;
 
-    public NewCertificateDialog(Stage parent, CertificateWrapper wrapper, final Window window) {
+    public NewCertificateDialog(Stage parent, final Window window) {
         super();
         primaryStage = parent;
         this.window = window;
         initOwner(parent);
         initModality(Modality.APPLICATION_MODAL);
         setTitle("Create new certificate");
+        
         getIcons().add(ResourceManger.getInstance().newx16);
         iws = new ImageWriterService(window);
         
         regexUtils = new RegexUtils();
         certificateUtils = new CertificateUtils();
         
-        this.wrapper = wrapper;
-        this.certificateImage = new Image(wrapper.getCertificateImage().toURI().toString());
-        
         fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
         fileChooser.getExtensionFilters().add(extFilter);
-        gridPane = createEntryFieldsandLabels(wrapper); // MEGA FUNCTION
-        Scene scene = new Scene(gridPane, Color.WHITE);
+        
+        scene = new Scene(new VBox(), Color.WHITE);
+//        LoadingBox box = new LoadingBox(primaryStage);
+//        box.showProgressing(populatingProgress);
+//        final Pane pane = new VBox();
+//        indicator = new ProgressIndicator();
+//        pane.getChildren().add(indicator);
+//        
+        
+//        Platform.runLater(new Runnable() {
+//            @Override
+//            public void run() {
+//            }
+//        });
+        buttonAction = getButtonActions();
+        nextButton = new Button("Next");
+        GridPane.setHalignment(nextButton, HPos.RIGHT);
+        nextButton.setOnAction(buttonAction);
+        finishButton = new Button("Finish");
+        GridPane.setHalignment(finishButton, HPos.RIGHT);
+        finishButton.setOnAction(buttonAction);
+    }
+
+    public void openFor(CertificateWrapper wrapper) {
+        iws.setDefaultExtension(UserDataManager.getDefaultImageFormat()); // update changes
+        iws.setA3Output(UserDataManager.isA3Output()); // update changes
+//        certificateImage = new Image(wrapper.getCertificateImage().toURI().toString());
+        if(this.wrapper == null) {
+            gridPane = createEntryFieldsandLabels(wrapper); // MEGA FUNCTION
+            this.wrapper = wrapper;    
+        } else {
+            if(!this.wrapper.equals(wrapper)) {
+                System.out.println("wrapper changed..."); // debug
+                gridPane = createEntryFieldsandLabels(wrapper);
+                this.wrapper = wrapper;
+            } else {
+                System.out.println("wrapper hasnt changed..."); // debug
+            }
+        }
+        iws.setCertificateImage(new Image(this.wrapper.getCertificateImage().toURI().toString()));
+        scene.setRoot(gridPane);
         setScene(scene);
         sizeToScene();
         show();
     }
-
+    
     private GridPane createEntryFieldsandLabels(final CertificateWrapper wrapper) {
         final GridPane gridPane = new GridPane();
         gridPane.setPadding(new Insets(10));
@@ -152,13 +204,15 @@ class NewCertificateDialog extends Stage {
         
         /* start populating gui components according to wrapper*/
         System.out.println("Populating fields");
+        Node previousNode;
         for (CertificateField certificateField : wrapper.getCertificateFields()) {
             Label label;
             if(certificateField.getFieldType() == FieldType.TEXT){
                 label = new Label(certificateField.getFieldName() + " : ");
                 System.out.println("Adding TEXT : " + certificateField.getFieldName()); // debug
             } else {
-                label = new Label(certificateField.getFieldType().toString() + " : ");
+                label = new Label(certificateField.getFieldType().getName() + " : "); // new enum implementation
+//                label = new Label(certificateField.getFieldType().toString() + " : ");
                 System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
             }
             gridPane.add(label, 0, row);
@@ -174,62 +228,59 @@ class NewCertificateDialog extends Stage {
                 System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
                 ComboBox<String> box = new ComboBox(list);
-                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
+                box.setMinWidth(FIELD_WIDTH);
+//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
+                // USEFUL DEBUG INFO
+//                System.out.println("combobox layout width " + box.getLayoutBounds().getWidth() + ", layout height " + box.getLayoutBounds().getHeight()); // debug
+//                System.out.println("combobox boundsinlocal width " + box.getBoundsInLocal().getWidth() + ", boundsinlocal height " + box.getBoundsInLocal().getHeight()); // debug                
+//                System.out.println("combobox boundsinparent width " + box.getBoundsInParent().getWidth() + ", boundsinparent height " + box.getBoundsInParent().getHeight()); // debug                
+                // END
 //                box.setOnAction(getComboActionTraverse()); // TODO action traverse
+//                box.setOnKeyPressed(actionTraverse); // doesnt work
+//                box.setOnAction(actionComboTraverse); // not good
+                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
                 gridPane.add(box, 1, row);
                 dataHolders.add(box); // save a copy for printing later
                 box.getSelectionModel().select(0);
             } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
                 ComboBox<String> box = new ComboBox<>(list);
-                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
+                box.setMinWidth(FIELD_WIDTH);
+//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
 //                box.setOnAction(getComboActionTraverse()); // TODO action traverse
+//                box.setOnKeyPressed(actionTraverse); // doesnt work
+//                box.setOnAction(actionComboTraverse); // not good
+                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
                 gridPane.add(box, 1, row);
                 dataHolders.add(box);
                 box.getSelectionModel().select(0);
             } else if(certificateField.getFieldType() == FieldType.TEXT){
 //                TextField textField = new TextField();
-                ComboBox<String> textField = new ComboBox<>();
-                if(textField.getPrefWidth() < FIELD_WIDTH) textField.setPrefWidth(FIELD_WIDTH);
-                textField.setEditable(true);
-//                textField.widthProperty().
-                textField.setOnKeyPressed(getActionTraverse());
-                gridPane.add(textField, 1, row);
-                dataHolders.add(textField); // save a copy for printing later
-            } else {
+                ComboBox<String> box = new ComboBox<>();
+                box.setMinWidth(FIELD_WIDTH);
+//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
+                box.setEditable(true);
+                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
+//                box.setOnAction(actionComboTraverse); // not good
+//                box.setOnKeyPressed(actionTraverse); // doesnt work
+                gridPane.add(box, 1, row);
+                dataHolders.add(box); // save a copy for printing later
+            } else { // REGNO, DATE
                 TextField textField = new TextField();
-                textField.setOnKeyPressed(getActionTraverse());
+                textField.setOnKeyPressed(actionTraverse);
                 gridPane.add(textField, 1, row);
                 dataHolders.add(textField); // save a copy for printing later
             }
+//            indicator.setProgress(row * 100 / wrapper.getCertificateFields().size()); // null pointer
+            populatingProgress.set(row * 100 / wrapper.getCertificateFields().size());
+//            System.out.println("populating progress" + populatingProgress.get());
             row++;
         }
         /* populated */
         
-        Button nextButton = new Button("Next");
-        GridPane.setHalignment(nextButton, HPos.RIGHT);
         gridPane.add(nextButton, 1 , row); // add before the last column
-        nextButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                if(isFieldsFilled()) {
-                    retrieveInfoAndSendForPrinting();
-                    clearOrIncrementFields();
-                }
-            }
-        });
-        Button finishButton = new Button("Finish");
-        GridPane.setHalignment(finishButton, HPos.RIGHT);
         gridPane.add(finishButton, 2, row); // add to the last column
-        finishButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if(isFieldsFilled()) {
-                    retrieveInfoAndSendForPrinting();
-                    close();
-                }
-            }
-        });
+        
         
         return gridPane;
     }
@@ -268,30 +319,47 @@ class NewCertificateDialog extends Stage {
         }
         
         
-        File saveFile;
+//        File saveFile;
+//        if(savename.contains("/")) {
+//            // remove slash and every character after slash because windows doesnt support slashes in filenames
+//            saveFile = new File(savePathField.getText() + File.separatorChar + savename.substring(0, savename.lastIndexOf("/")));
+//        } else {
+//            saveFile = new File(savePathField.getText() + File.separatorChar + savename);
+//        }
+//        System.out.println("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
+        
         if(savename.contains("/")) {
             // remove slash and every character after slash because windows doesnt support slashes in filenames
-            saveFile = new File(savePathField.getText() + File.separatorChar + savename.substring(0, savename.lastIndexOf("/")));
-        } else {
-            saveFile = new File(savePathField.getText() + File.separatorChar + savename);
+            savename =  savename.substring(0, savename.lastIndexOf("/"));
         }
-        System.out.println("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
+        
+        String savePath = savePathField.getText();
 
-        saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension
-//        progressiveSave(fields, saveFile);
-        
-        iws.takeWork(certificateImage, fields, saveFile);
-        
-//        try {
-//            BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
-//            System.out.println("created buffered image...");
-//            ImageUtils.saveImage(createBufferedImage, saveFile.getAbsolutePath());
-//            System.out.println("saved image...");
-//        } catch (FileNotFoundException ex) {
-//            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-//        } catch (IOException ex) {
-//            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+//        saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension, DONT DO THIS NOW
+
+        try {
+            // give order to image writer service
+    //        iws.takeWork(certificateImage, fields, saveFile); // no need to specify certificate image
+            iws.takeImageWriteOrder(new ImageWriteOrder(fields, savePath, savename));
+            
+    //        try {
+    //            BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
+    //            System.out.println("created buffered image...");
+    //            ImageUtils.saveImage(createBufferedImage, saveFile.getAbsolutePath());
+    //            System.out.println("saved image...");
+    //        } catch (FileNotFoundException ex) {
+    //            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+    //        } catch (IOException ex) {
+    //            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+    //        }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException ex) {
+            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (OutOfMemoryError ex) {
+            Logger.getLogger(NewCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
+            Alert.showAlertError(primaryStage, "Error", "OutOfMemoryError");
+        }
     }
 
     private EventHandler<? super KeyEvent> getActionTraverse() {
@@ -299,10 +367,21 @@ class NewCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER) {
-                    System.out.println("KeyCode.ENTER");
+                    System.out.println("KeyCode.ENTER : Textfield traverse");
                     Node n = (Node) t.getSource();
                     n.impl_traverse(Direction.NEXT);
                 }
+            }
+        };
+    }
+    
+    private EventHandler<ActionEvent> getComboActionTraverse() {
+        return new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                Node n = (Node) t.getSource();
+                n.impl_traverse(Direction.NEXT);
+                System.out.println("ActionEvent on combobox");
             }
         };
     }
@@ -317,6 +396,19 @@ class NewCertificateDialog extends Stage {
             }
         }
         return filled;
+    }
+    
+    private void resumeFocus() {
+        Node nextFocusNode = null;
+        int index = 0;
+        for(CertificateField field : wrapper.getCertificateFields()) {
+            FieldType type = field.getFieldType();
+            if(type == FieldType.TEXT) {
+                if(!field.isRepeating()) nextFocusNode = dataHolders.get(index);
+            }
+            index++;
+        }
+        if(nextFocusNode != null) nextFocusNode.requestFocus();
     }
     
     private void clearOrIncrementFields() {
@@ -355,6 +447,71 @@ class NewCertificateDialog extends Stage {
                 if(file != null) {
                     savePathField.setText(file.getAbsolutePath());
                     UserDataManager.setCertificateSavePath(file);
+                }
+            }
+        };
+    }
+    
+    private Node getSuitableComponent(FieldType fieldType, CertificateField certificateField) {
+        if (fieldType == FieldType.IMAGE) {
+            TextField textField = new TextField();
+            textField.setPrefWidth(FIELD_WIDTH);
+            return textField;
+        } else if(fieldType == FieldType.COURSE){
+            ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
+            ComboBox<String> box = new ComboBox(list);
+            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
+            box.setOnAction(actionComboTraverse);
+            return box;
+        } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
+            ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
+            ComboBox<String> box = new ComboBox<>(list);
+            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
+            box.setOnAction(actionComboTraverse);
+            return box;
+        } else if(certificateField.getFieldType() == FieldType.TEXT){
+            ComboBox<String> box = new ComboBox<>();
+            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
+            box.setEditable(true);
+            box.setOnAction(actionComboTraverse);
+            return box;
+        } else {
+            TextField textField = new TextField();
+            textField.setOnKeyPressed(actionTraverse);
+            return textField;
+        }
+    }
+
+    private EventHandler<KeyEvent> getEnterKeyAction() {
+        return new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent t) {
+                if(t.getCode() == KeyCode.ENTER){
+                    System.out.println("KeyCode.ENTER : traversing to Direction.NEXT"); // debug
+                    ((Node)t.getSource()).impl_traverse(Direction.NEXT);
+                }
+            }
+        };
+    }
+
+    private EventHandler<ActionEvent> getButtonActions() {
+        return new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                Button source = (Button) event.getSource();
+                if(source.equals(nextButton)) {
+                    System.out.println("pressed next.."); // debug
+                    if(isFieldsFilled()) {
+                        retrieveInfoAndSendForPrinting();
+                        clearOrIncrementFields();
+                        resumeFocus();
+                    }
+                } else if(source.equals(finishButton)) {
+                    System.out.println("pressed finish.."); // debug
+                    if(isFieldsFilled()) {
+                        retrieveInfoAndSendForPrinting();
+                        close();
+                    }    
                 }
             }
         };

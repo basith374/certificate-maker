@@ -49,6 +49,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -81,6 +83,7 @@ public class Window  {
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
     private static ImageSizeDialog IMAGESIZEDIALOG;
     private static AboutDialog ABOUT_DIALOG;
+    private static LoadingBox LOADING;
     
     private BorderPane borderPane;
     private static TabPane tabPane;
@@ -133,6 +136,7 @@ public class Window  {
         
         ResourceManger.getInstance().loadAppResources();
         certificateUtils = new CertificateUtils();
+        LOADING = new LoadingBox(PRIMARY_STAGE);
         
         PRIMARY_STAGE.getIcons().add(ResourceManger.getInstance().iconx48);
         setMouseMode(MouseMode.MOVE);
@@ -323,17 +327,47 @@ public class Window  {
 //        new ImageView(new File("icons/newtempx16.png").getAbsolutePath());
         menuBar.getMenus().add(fileMenu);
 
+        // OUTPUT MENU
+        Menu outputMenu = new Menu("Output");
+        
+        
+        CheckMenuItem a3outputMenu = new CheckMenuItem("A3 Output");
+        a3outputMenu.setSelected(UserDataManager.isA3Output());
+        ToggleGroup toggleGroup = new ToggleGroup();
+        RadioMenuItem jpgMenu = RadioMenuItemBuilder.create()
+                .text("JPG Format")
+                .toggleGroup(toggleGroup)
+                .build();
+        RadioMenuItem pngMenu = RadioMenuItemBuilder.create()
+                .text("PNG Format")
+                .toggleGroup(toggleGroup)
+                .build();
+        if("jpg".equalsIgnoreCase(UserDataManager.getDefaultImageFormat())) {
+            jpgMenu.setSelected(true);
+        } else {
+            pngMenu.setSelected(true);
+        }
+        
+        
+        a3outputMenu.setOnAction(handler);
+        jpgMenu.setOnAction(handler);
+        pngMenu.setOnAction(handler);
+        
+        outputMenu.getItems().add(a3outputMenu);
+        outputMenu.getItems().add(new SeparatorMenuItem());
+        outputMenu.getItems().add(jpgMenu);
+        outputMenu.getItems().add(pngMenu);
+        
+        menuBar.getMenus().add(outputMenu);
+        
         // HELP MENU
         Menu helpMenu = new Menu("Help");
-
+        
         MenuItem aboutMenu = new MenuItem("About");
-        
         aboutMenu.setGraphic(new ImageView(ResourceManger.getInstance().iconx16));
-
         helpMenu.getItems().add(aboutMenu);
+        aboutMenu.setOnAction(handler);
         
-        aboutMenu.setOnAction(handler); // dependency
-
         menuBar.getMenus().add(helpMenu);
 
         // finish
@@ -360,7 +394,17 @@ public class Window  {
                     File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "Set template for certificate", null);
                     if(file != null) {
                         CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
-                        createNewCertficateDialog(PRIMARY_STAGE, certificateWrapper);
+                        if(!isOpenedInGui(file)) {
+                            openTemplateInGui(file);
+                            tabPane.getSelectionModel().select(getTabIndex(file));
+                        }
+                        else tabPane.getSelectionModel().select(getTabIndex(file)); // select tab containing file if not selected
+                        
+                        // end
+                        if(NEWCERTIFICATE_DIALOG == null) {
+                            NEWCERTIFICATE_DIALOG = new NewCertificateDialog(PRIMARY_STAGE, Window.this);
+                        }
+                        NEWCERTIFICATE_DIALOG.openFor(certificateWrapper);
                     }
                 } else if ("open template".equalsIgnoreCase(action)) {
                     openTemplateByDialog(PRIMARY_STAGE);
@@ -373,12 +417,20 @@ public class Window  {
                 } else if ("about".equalsIgnoreCase(action)) {
 //                    showCreator();
 //                    showTheRealThing();
-//                    flaut();
+//                    showThemWhatBCZisReallyAbout();
 //                    blowupcomputer();
                     if(ABOUT_DIALOG == null) {
                         ABOUT_DIALOG = new AboutDialog(PRIMARY_STAGE);
                     }
                     ABOUT_DIALOG.show();
+                } else if("a3 output".equalsIgnoreCase(action)) {
+//                    System.out.println("a3output " + a3outputMenu.isSelected()); // debug
+                    CheckMenuItem checkMenuItem = (CheckMenuItem) event.getSource();
+                    UserDataManager.setA3Output(checkMenuItem.isSelected());
+                } else if("jpg format".equalsIgnoreCase(action)) {
+                    UserDataManager.setDefaultImageFormat("jpg");
+                } else if("png format".equalsIgnoreCase(action)) {
+                    UserDataManager.setDefaultImageFormat("png");
                 }
             }
         };
@@ -389,7 +441,9 @@ public class Window  {
      */
     private void shutdown() {
         // TODO before shutdown actions
-        System.exit(0);
+//        System.exit(0); // not good
+        System.out.println("Bye...");
+        Platform.exit();
     }
     
     /**
@@ -398,7 +452,19 @@ public class Window  {
      */
     private Node getTabPane() {
         tabPane = new TabPane();
-//        tabPane.addEventHandler(EventType.ROOT, );
+        // status label changing listeners
+//        tabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
+//            @Override
+//            public void changed(ObservableValue<? extends Tab> ov, Tab t, Tab t1) {
+//                CertificateTab tab = (CertificateTab) ov.getValue();
+//                if(tab != null) {
+//                    File imageFile = tab.getCertificateWrapper().getCertificateImage(); // null pointer
+//                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
+//                }
+//                System.out.println("tab selection changed");
+//            }
+//        });
+//        tabPane.setTabClosingPolicy(); // TODO tab close combobox reset
         return tabPane;
     }
 
@@ -435,10 +501,14 @@ public class Window  {
                 if(!isOpenedInGui(file))
                     if(file.exists()) {
                         openTemplateInGui(file);
+                        tabPane.getSelectionModel().select(getTabIndex(file));
                     } else {
                         System.out.println("file doesnt exists. removing entry...");
                         ((ComboBox)t.getSource()).getItems().remove(file.getAbsolutePath());
                     }
+                else
+                    // select tab containing file if not selected
+                    tabPane.getSelectionModel().select(getTabIndex(file));
             }
         });
         // event listeners for automatic data update
@@ -449,6 +519,7 @@ public class Window  {
                 UserDataManager.setRecentTemplates(change.getList());
             }
         });
+        if(!recentTemplatesBox.getItems().contains("")) recentTemplatesBox.getItems().add(0, "");
         toolBar.getItems().add(recentTemplatesBox);
 
         Button newCertificateBtn = new Button("New Certificate", new ImageView(ResourceManger.getInstance().newx16));
@@ -461,7 +532,10 @@ public class Window  {
                 int index = tabPane.getSelectionModel().getSelectedIndex();
                 if(index != -1){
                     CertificateWrapper wrapper = ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).getCertificateWrapper();
-                    createNewCertficateDialog(PRIMARY_STAGE, wrapper);
+                    if(NEWCERTIFICATE_DIALOG == null) {
+                        NEWCERTIFICATE_DIALOG = new NewCertificateDialog(PRIMARY_STAGE, Window.this);
+                    }
+                    NEWCERTIFICATE_DIALOG.openFor(wrapper);
                 } else {
                     System.out.println("unknown condition : tab index out of bounds"); // debug
                 }
@@ -792,17 +866,22 @@ public class Window  {
      * @param file
      */
     private void openTemplateInGui(File file) {
-//        System.out.println("certificate fields : ");
-//        for (org.bluecipherz.certificatemaker.CertificateField certificateField : wrapper.getCertificateFields()) {
-//            System.out.println(certificateField.getFieldName()); // debug
-//        }
-        // open in new tab
-        if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
-        
-        createNewTab(file);
-        // save the file path to the registry
-        UserDataManager.setLastActivityPath(file);
-        UserDataManager.setCertificateFilePath(file); // TODO broken, no usage yet
+        try {
+            //        System.out.println("certificate fields : ");
+            //        for (org.bluecipherz.certificatemaker.CertificateField certificateField : wrapper.getCertificateFields()) {
+            //            System.out.println(certificateField.getFieldName()); // debug
+            //        }
+                    // open in new tab
+                    if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
+                    
+                    createNewTab(file);
+                    // save the file path to the registry
+                    UserDataManager.setLastActivityPath(file);
+                    UserDataManager.setCertificateFilePath(file); // TODO broken, no usage yet
+        } catch (Exception ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            Alert.showAlertError(PRIMARY_STAGE, "Error", ex.toString());
+        }
     }
 
     /********* END HIGH LEVEL METHODS *********/
@@ -814,6 +893,15 @@ public class Window  {
             if(openedFile.equals(file)) opened = true;
         }
         return opened;
+    }
+    
+    private int getTabIndex(File file) {
+        int index = -1;
+        for(Tab tab : tabPane.getTabs()) {
+            File file2 = ((CertificateTab)tab).getFile();
+            if(file.equals(file2)) index = tabPane.getTabs().indexOf(tab);
+        }
+        return index;
     }
     
     
@@ -979,9 +1067,7 @@ public class Window  {
     }
     
 
-    
-    
-    public void createNewTab(final File file) {
+    public void createNewTab(final File file) throws Exception {
         CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
         CertificateTab tab = createNewTab(certificateWrapper);
         tab.setFile(file);
@@ -994,10 +1080,11 @@ public class Window  {
      * @param certificateWrapper
      */
     public CertificateTab createNewTab(final CertificateWrapper wrapper) {
-        CertificateWrapper certificateWrapper = wrapper;
+        final CertificateWrapper certificateWrapper = wrapper;
         //tab children heirarchy
         //tab -> scrollpane -> group -> imageview,text
         final CertificateTab tab = new CertificateTab();
+        final File imageFile = certificateWrapper.getCertificateImage();
         tab.setText(certificateWrapper.getName());
         final ScrollPane scrollPane = new ScrollPane();
         // dont know the real use of this,
@@ -1012,7 +1099,25 @@ public class Window  {
         
         Group group = new Group();
         
-        final ImageView imageView = new ImageView(certificateWrapper.getCertificateImage().toURI().toString()); // fixture
+        final ImageView imageView = new ImageView(); // fixture
+        final Image image = new Image(imageFile.toURI().toString(), true);
+//        progressBar.progressProperty().bind(image.progressProperty());
+//        addProgressBar();
+        LOADING.showProgressing(image.progressProperty());
+        image.progressProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
+//                System.out.println("oldvalue " + oldValue.toString() + ", newvalue " + newValue.toString());
+//                statusLabel.setText("Loading : " + (int) newValue.doubleValue() + "%");
+                if(newValue.intValue() == 1) {
+                    imageView.setImage(image);
+//                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
+//                    removeProgressBar();
+                }
+            }
+
+        });
+        
         if (LABEL_DIALOG == null) {
             LABEL_DIALOG = createLabelDialog(PRIMARY_STAGE);
         }
@@ -1041,6 +1146,7 @@ public class Window  {
 //        imageView.setFitHeight(scrollPane.getHeight());
 //        imageView.setFitWidth(scrollPane.getWidth());        
         scrollPane.setContent(group);
+        System.out.println("Adding to scrollpane " + scrollPane.toString()); // debug
         tab.setContent(scrollPane);
 //        System.out.println("adding tab to tabpane"); // debug
         tabPane.getTabs().add(tab);
@@ -1093,19 +1199,35 @@ public class Window  {
         return new LabelDialog(primaryStage, this);
     }
 
-    /**
-     * initializes and returns a new NewCertificateDialog object
-     * @param parent
-     * @param wrapper
-     * @return 
-     */
-    private NewCertificateDialog createNewCertficateDialog(Stage parent, CertificateWrapper wrapper) {
-        return new NewCertificateDialog(parent, wrapper, this);
-    }
     
     public static void showEditFieldDialog(CertificateText text) {
         LABEL_DIALOG.prepareAndShowEditTextDialog(text);
     }
 
 //    public static void main(String[] args) { launch(args); }
+    
+    
+    private String convertToStringSize(long length) {
+        String result = null;
+        if(length != 0) {
+            if(length < 1000) { // Bytes
+                result = String.valueOf(length);
+                result = result.substring(0, result.lastIndexOf(".") + 3) + "B";
+            } else if(length < 1000 * 1000) { // kilo bytes
+                result = String.valueOf(length / 1000f);
+                result = result.substring(0, result.lastIndexOf(".") + 3) + "KB";
+            } else if(length < 1000 * 1000 * 1000) { // mega bytes
+                result = String.valueOf(length / 1000000f);
+                result = result.substring(0, result.lastIndexOf(".") + 3) + "MB";
+            }
+        }
+        return result;
+    }
+    
+    public static double round(double value, int places) {
+        if(places < 0) throw new IllegalArgumentException();
+        long factor = (long) Math.pow(10, places);
+        long tmp = Math.round(value);
+        return (double) tmp / factor;
+    }
 }

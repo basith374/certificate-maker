@@ -6,7 +6,9 @@ package org.bluecipherz.certificatemaker;
 
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,6 +16,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.IntegerProperty;
@@ -21,6 +25,8 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
@@ -46,31 +52,61 @@ import javax.imageio.stream.ImageOutputStream;
  */
 public class ImageWriterService {
 
-    private final List<Task> tasks = new ArrayList<>();
-    
     private final ProgressBar progressBar;
     private final Label statusLabel;
 
-    private IntegerProperty pendingTasks = new SimpleIntegerProperty();
     
-    private ExecutorService exec = Executors.newSingleThreadExecutor(new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
-            t.setDaemon(true);
-            return t;
-        }
-    });
+//    private final ExecutorService exec = Executors.newSingleThreadExecutor(new ThreadFactory() {
+//        @Override
+//        public Thread newThread(Runnable r) {
+//            Thread t = new Thread(r);
+//            t.setDaemon(true);
+//            return t;
+//        }
+//    });
+    
+    private final ExecutorService exec = Executors.newSingleThreadExecutor();
     
     private final TaskMonitor taskMonitor = new TaskMonitor();
     
-    private final Window window;    
+    private ImageWriteOrder queue;
+    
+    private Image certificateImage;  
+    
+    private boolean a3output = UserDataManager.isA3Output();
+    private String defaultExtension = UserDataManager.getDefaultImageFormat();
 
+    //    private boolean dual = true; // for test
+    public Image getCertificateImage() {
+        return certificateImage;
+    }
+
+    public void setCertificateImage(Image certificateImage) {
+        this.certificateImage = certificateImage;
+    }
+
+
+    public void setA3Output(boolean dual) {
+        this.a3output = dual;
+    }
+    
+    private final CertificateUtils certificateUtils = new CertificateUtils();
+
+    public void setDefaultExtension(String defaultExtension) {
+        this.defaultExtension = defaultExtension;
+    }
+
+    /**
+     * Image Writer Service literally means what it says. this class is given work
+     * orders it creates the output.
+     * @param window
+     * @param certificateImage 
+     */
     public ImageWriterService(final Window window) {
-        this.window = window;
         
         this.progressBar = window.getProgressBar();
         this.statusLabel = window.getStatusLabel();
+        
         
         // auto-hide progressbar on idle task
         taskMonitor.idleProperty().addListener(new InvalidationListener() {
@@ -86,21 +122,26 @@ public class ImageWriterService {
         
         // bind progressbar to taskmonitor
         progressBar.progressProperty().bind(taskMonitor.currentTaskProgressProperty());
+        
+        taskMonitor.pendingTasksProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> ov, Number oldVal, Number newVal) {
+                if(newVal.intValue() > 0) {
+                    statusLabel.setText("Tasks : " + newVal.intValue());
+                } else {
+                    statusLabel.setText("All tasks done.");
+                }
+            }
+        });
     }
     
-//    public void submit(Task task) {
-//        exec.submit(task);
-//        threads.add(task);
-//    }
-//    
-    
-    public Task<Void> createWorker(final Image certificateImage, final HashMap<CertificateField, String> fields, final File saveFile) {
+    public Task<Void> createOutputWorker(final BufferedImage bufferedImage, final File saveFile) {
         return new Task() {
             @Override
             protected Void call() throws Exception {
-                BufferedImage bufferedImage = ImageUtils.createBufferedImage(certificateImage, fields); // IMPORTANT
                 try (FileOutputStream fos = new FileOutputStream(saveFile); ImageOutputStream ios = ImageIO.createImageOutputStream(fos)) {
-                    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
+                    System.out.println("image writers format " + defaultExtension); // debug
+                    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(defaultExtension);
                     ImageWriter writer = writers.next(); 
                     writer.setOutput(ios);
                     writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
@@ -118,36 +159,61 @@ public class ImageWriterService {
                 }
                 return null;
             }
-        };        
+        };
     }
 
-    void takeWork(Image certificateImage, HashMap<CertificateField, String> fields, File saveFile) {
-        Task task = createWorker(certificateImage, fields, saveFile);
-        task.setOnSucceeded(new EventHandler() {
-            @Override
-            public void handle(Event t) {
-                pendingTasks.set(pendingTasks.get() - 1);
-                if(pendingTasks.get() > 0) {
-                    statusLabel.setText("Tasks : " + pendingTasks.get());
-                } else {
-                    statusLabel.setText("All tasks done.");
-                }
-            }
-        });
-        pendingTasks.set(pendingTasks.get() + 1);
-        statusLabel.setText("Tasks : " + pendingTasks.get());
-//        progressBar.progressProperty().bind(task.progressProperty());
+    public void takeWork(BufferedImage bi, File file){
+        Task<Void> task = createOutputWorker(bi, fixDefaultExtension(file));
         taskMonitor.monitor(task);
         exec.submit(task);
     }
+    
+    public File fixDefaultExtension(File file) {
+        if("jpg".equalsIgnoreCase(defaultExtension)) {
+            return certificateUtils.correctJPGExtension(file);
+        } else {
+            return certificateUtils.correctPNGExtension(file);
+        }
+    }
+    
+    public void takeImageWriteOrder(ImageWriteOrder order) throws FileNotFoundException, IOException, OutOfMemoryError {
+        System.out.println("IMAGE WRITE SERVICE : default image extension " + defaultExtension); // debug
+        if(a3output) {
+            if(queue == null) {
+                queue = order;
+                statusLabel.setText("Added to queue");
+                System.out.println("IMAGE WRITER SERVICE : added order to queue"); // debug
+                // TODO status message : ADDED TO QUEUE
+            } else {
+                if(certificateImage == null) System.out.println("Shit rain!"); // debug
+                BufferedImage img1 = ImageUtils.createBufferedImage(certificateImage, queue.fields);
+                BufferedImage img2 = ImageUtils.createBufferedImage(certificateImage, order.fields);
+                BufferedImage combined = ImageUtils.combineImages(img1, img2);
+                /* a lil messy below */
+                String combinedName = queue.saveName + order.saveName; // TODO save name for combined image
+                File saveFile = new File(queue.savePath + File.separatorChar + combinedName); // assuming both are to saved in same location
+                takeWork(combined, saveFile);
+                queue = null;
+            }
+        } else {
+            BufferedImage img = ImageUtils.createBufferedImage(certificateImage, order.fields);
+            File saveFile = new File(order.savePath + File.separatorChar + order.saveName);
+            takeWork(img, saveFile);
+        }
+    }
+    
+    
+    
     
     class TaskMonitor {
         private final ReadOnlyObjectWrapper<Task> currentTask = new ReadOnlyObjectWrapper<>();
         private final ReadOnlyStringWrapper currentTaskName = new ReadOnlyStringWrapper();
         private final ReadOnlyDoubleWrapper currentTaskProgress = new ReadOnlyDoubleWrapper();
         private final ReadOnlyBooleanWrapper idle = new ReadOnlyBooleanWrapper(true);
+        private final ReadOnlyIntegerWrapper pendingTasks = new ReadOnlyIntegerWrapper();
         
         public void monitor(final Task task) {
+            pendingTasks.set(pendingTasks.get() + 1); // add one to tasks, move this inside the switch
             task.stateProperty().addListener(new ChangeListener<Task.State>() {
                 @Override
                 public void changed(ObservableValue<? extends Task.State> observableValue, Task.State oldState, Task.State state) {
@@ -161,6 +227,9 @@ public class ImageWriterService {
                             idle.set(false);
                             break;
                         case SUCCEEDED:
+                            pendingTasks.set(pendingTasks.get() - 1); // reduce task count
+                            idle.set(true);
+                            break;
                         case CANCELLED:
                         case FAILED:
                             task.stateProperty().removeListener(this);
@@ -169,6 +238,7 @@ public class ImageWriterService {
                     }
                     
                 }
+
             });
         }
         
@@ -192,7 +262,11 @@ public class ImageWriterService {
 
         public ReadOnlyBooleanProperty idleProperty() {
             return idle.getReadOnlyProperty();
-        }        
+        }
+        
+        public ReadOnlyIntegerProperty pendingTasksProperty() {
+            return pendingTasks.getReadOnlyProperty();
+        }
         
     }
     

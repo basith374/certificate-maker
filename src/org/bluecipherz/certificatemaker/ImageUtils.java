@@ -125,37 +125,53 @@ public class ImageUtils {
         return false;
     }
 
+    @Deprecated
     public static void createCertificateImage(CertificateWrapper wrapper, Image certificateImage, File file) {
         BufferedImage image = SwingFXUtils.fromFXImage(certificateImage, null);
         image = writeFieldsToImage(image, wrapper);
         saveImage(image, file.getAbsolutePath());
     }
 
+    @Deprecated
     private static BufferedImage writeFieldsToImage(BufferedImage image, CertificateWrapper wrapper) {
         Graphics imageGraphics = image.getGraphics();
         imageGraphics.setColor(Color.BLACK);
-//        for (CertificateField field : wrapper.getCertificateFields()) {
-////            imageGraphics.setFont(Font.getFont(field.getFontFamily()));
-//            imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle() == Font.BOLD ? Font.BOLD : Font.PLAIN, field.getFontSize()));
-////            System.out.println(field.getFontFamily() + ", " + field.getFontSize() + "," + (field.isBoldText()?"Bold":"Plain"));
-////            imageGraphics.drawString(field.text, field.getX(), field.getY());
-//        }
+        for (CertificateField field : wrapper.getCertificateFields()) {
+            imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle() == Font.BOLD ? Font.BOLD : Font.PLAIN, field.getFontSize()));
+//            System.out.println(field.getFontFamily() + ", " + field.getFontSize() + "," + (field.isBoldText()?"Bold":"Plain")); // debug
+//            imageGraphics.drawString(field.text, field.getX(), field.getY()); // old implementation
+        }
         return image;
     }
     
     // new Method, use this
-    public static BufferedImage createBufferedImage(Image image, HashMap<CertificateField, String> fields) throws FileNotFoundException, IOException {
-        BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+    public static BufferedImage createBufferedImage(Image image, HashMap<CertificateField, String> fields) throws FileNotFoundException, IOException, OutOfMemoryError {
+        int width = (int) image.getWidth();
+        int height = (int) image.getHeight();
+        BufferedImage bufferedImg = SwingFXUtils.fromFXImage(image, null);
         
-        Graphics2D imageGraphics = (Graphics2D) bufferedImage.getGraphics();
+        BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = bufferedImage.createGraphics();
+        
+//        Color oldColor = g2.getColor();
+//        // fill background
+//        g2.setPaint(Color.WHITE);
+//        g2.fillRect(0, 0 , width, height);
+//        // draw image
+//        g2.setColor(oldColor);
+        
+        g2.drawImage(bufferedImg, null, 0, 0);
+        
         // TODO antialiasing, dithering
         
-        imageGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         // there are three antialiasing options that i think can be used here but dont know which to use.
-        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON); // default
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON); // default
 //        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB); // good on lcd
 //        imageGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_GASP); // if the font has antialiasing details in it
-        imageGraphics.setColor(Color.BLACK);
+        
+        g2.setColor(Color.BLACK);
+//        imageGraphics.setColor(Color.WHITE); // test
         
         int index=0;
         for (Map.Entry<CertificateField, String> field : fields.entrySet()) {
@@ -217,9 +233,9 @@ public class ImageUtils {
                         }
                     }
                     BufferedImageOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
-                    imageGraphics.drawImage(buffimg, op, x, y);                    
+                    g2.drawImage(buffimg, op, x, y);                    
                 } else {
-                    imageGraphics.drawImage(buffimg, null, x, y); // image dimensions less than specified
+                    g2.drawImage(buffimg, null, x, y); // image dimensions less than specified
                 }
                 System.out.println("drawImage(" + field.getValue() + ")"); // debug
             } else {
@@ -227,15 +243,40 @@ public class ImageUtils {
                 text.setText(field.getValue());
                 int x = (int) (field.getKey().getX() - text.getLayoutBounds().getWidth() / 2);
                 int y = field.getKey().getY();
-                imageGraphics.setFont(new Font(field.getKey().getFontFamily(), field.getKey().getFontStyle(), field.getKey().getFontSize()));
-                imageGraphics.drawString(field.getValue(), x, y);
+                g2.setFont(new Font(field.getKey().getFontFamily(), field.getKey().getFontStyle(), field.getKey().getFontSize()));
+                g2.drawString(field.getValue(), x, y);
                 System.out.println("drawString(" + field.getValue() + ")"); // debug
             }
             index++;
-        }       
-        
+        }
+        g2.dispose();
         return bufferedImage;
     }
 
+    public static BufferedImage combineImages(BufferedImage img1, BufferedImage img2) {
+        int width = img1.getWidth() + img2.getWidth();
+        int height = Math.max(img1.getHeight(), img2.getHeight());
+//        BufferedImage newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // for png
+        BufferedImage newImage;
+//        if("jpg".equalsIgnoreCase(UserDataManager.getDefaultImageFormat())) {
+            newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            System.out.println("combineImages() IMAGE TYPE : TYPE_INT_RGB"); // debug
+            System.out.println("img1 type :" + img1.getType() + ", img2 type :" + img2.getType());
+//        } else {
+//            newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // png
+//            System.out.println("combineImages() IMAGE TYPE : TYPE_INT_ARGB"); // debug
+//        }
+        Graphics2D g2 = newImage.createGraphics();
+        Color oldColor = g2.getColor();
+        // fill background
+        g2.setPaint(Color.WHITE);
+        g2.fillRect(0, 0 , width, height);
+        // draw image
+        g2.setColor(oldColor);
+        g2.drawImage(img1, null, 0, 0);
+        g2.drawImage(img2, null, img1.getWidth(), 0);
+        g2.dispose();
+        return newImage;
+    }
 
 }

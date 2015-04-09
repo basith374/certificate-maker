@@ -223,6 +223,33 @@ public class UserDataManager {
         }
         
     }
+    
+    public static boolean isA3Output() {
+        return prefs.getBoolean("a3output", false);
+    }
+    
+    public static void setA3Output(boolean val) {
+        prefs.putBoolean("a3output", val);
+    }
+    
+    public static boolean isAvatarImageProportionate() {
+        return prefs.getBoolean("avatarproportionate", false);
+    }
+    
+    public static void setAvatarImageProportionate(boolean val) {
+        prefs.getBoolean("avatarproportionate", val);
+    }
+    
+    public static String getDefaultImageFormat() {
+        return prefs.get("imageFormat", "jpg");
+    }
+    
+    public static void setDefaultImageFormat(String format) {
+        if("jpg".equalsIgnoreCase(format) || "png".equalsIgnoreCase(format)) {
+            System.out.println("DEFAULT IMAGE EXTENSION : " + format); // debug
+            prefs.put("imageFormat", format);
+        }
+    }
     // END PERSISTENCE METHODS
     
 }

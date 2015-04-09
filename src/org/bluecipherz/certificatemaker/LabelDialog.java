@@ -128,7 +128,7 @@ class LabelDialog extends Stage {
                 
                 textHolder.getChildren().add(subjectText);
                 
-                System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
+                System.out.println("Adding " + certificateField.getFieldType().getName() + ", contents : " + (textHolder.getChildren().size() - 1)); // debug
                 if(certificateField.getFieldType() == FieldType.TEXT && !"".equalsIgnoreCase(subjectText.getText())) {
                     close();
                 } else {
