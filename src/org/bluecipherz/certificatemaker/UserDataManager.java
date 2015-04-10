@@ -250,6 +250,14 @@ public class UserDataManager {
             prefs.put("imageFormat", format);
         }
     }
+    
+    public static void setMultipleFieldsAllowed(boolean value) {
+        prefs.putBoolean("multiplefields", value);
+    }
+    
+    public static boolean isMultipleFieldsAllowed() {
+        return prefs.getBoolean("multiplefields", false);
+    }
     // END PERSISTENCE METHODS
     
 }

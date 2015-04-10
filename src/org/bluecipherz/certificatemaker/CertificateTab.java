@@ -18,12 +18,22 @@ public class CertificateTab extends Tab {
     private CertificateWrapper certificateWrapper;
     
     private boolean courseFieldAdded;
+    private boolean courseDetailsFieldAdded;
     private boolean avatarFieldAdded;
     private boolean dateFieldAdded;
     private boolean regnoFieldAdded;
 
+    public boolean isCourseDetailsFieldAdded() {
+        return courseDetailsFieldAdded;
+    }
+
+    public void setCourseDetailsFieldAdded(boolean courseDetailsFieldAdded) {
+        this.courseDetailsFieldAdded = courseDetailsFieldAdded;
+    }
+
     public CertificateTab() {
         courseFieldAdded = false;
+        courseDetailsFieldAdded = false;
         avatarFieldAdded = false;
         dateFieldAdded = false;
         regnoFieldAdded = false;
@@ -84,7 +94,5 @@ public class CertificateTab extends Tab {
     public void setCertificateWrapper(CertificateWrapper certificateWrapper) {
         this.certificateWrapper = certificateWrapper;
     }
-    
-    
     
 }

@@ -147,7 +147,7 @@ public class CertificateField {
     public String toString() {
 //        return super.toString();
         String output = "";
-        output = output.concat("{CertificateField : x=" + x + ", y=" + y + ", fieldtype=" + fieldType);
+        output = output.concat("\t{CertificateField : x=" + x + ", y=" + y + ", fieldtype=" + fieldType);
         if(fieldType != FieldType.IMAGE) {
             if(fieldType == FieldType.TEXT) output = output.concat(", fieldname=" + fieldName);
             output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily + ", fontstyle=" + fontStyle);
@@ -159,10 +159,10 @@ public class CertificateField {
                             output = output.concat(course+",");
                         }
                     } else {
-                        System.out.println("Courses is empty");
+                        System.out.println("Courses is empty"); // debug
                     }
                 } else {
-                    System.out.println("Courses has become null.");
+                    System.out.println("Courses has become null."); // debug
                 }
             }
         }

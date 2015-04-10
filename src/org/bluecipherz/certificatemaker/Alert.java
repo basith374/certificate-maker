@@ -16,6 +16,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -102,6 +104,14 @@ public class Alert extends Stage {
         
 //        Scene scene = new Scene(borderPane, Color.WHITE);
         Scene scene = new Scene(gridPane, Color.WHITE);
+        scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent t) {
+                if(t.getCode() == KeyCode.ESCAPE) {
+                    close();
+                }
+            }
+        });
         setScene(scene);
         sizeToScene();
         show();

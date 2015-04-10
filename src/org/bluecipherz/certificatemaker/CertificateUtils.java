@@ -15,9 +15,12 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.stage.FileChooser;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -33,35 +36,6 @@ import javax.xml.bind.Unmarshaller;
  * @author bazi
  */
 public class CertificateUtils {
-    
-    /**
-     * used by outsiders
-     * converts and CertificateField into a Text object
-     * @param certificateField
-     * @return 
-     */
-    public CertificateText createText(final CertificateField certificateField) {
-        CertificateText text = new CertificateText(certificateField);
-        EventHandler<MouseEvent> mouseHandler = Window.getTextMouseHandler();
-        text.setOnMousePressed(mouseHandler);
-        text.setOnMouseDragged(mouseHandler);
-        text.setOnMouseReleased(mouseHandler);
-        return text;
-    }
-
-    public ImageView createAvatarImage(int x, int y, int width, int height) {
-        Image image = new Image(getClass().getResourceAsStream("icons/avatarx1500.png"), width, height, false, true);
-//        System.out.println("image dimensions : " + width + "x" + height); // debug
-        ImageView imageView = new ImageView(image);
-        imageView.setX(x);
-        imageView.setY(y);
-//        System.out.println("image coords : x" + x + " y" + y); // debug
-        EventHandler<MouseEvent> mouseHandler = Window.getAvatarMouseHandler();
-        imageView.setOnMousePressed(mouseHandler);
-        imageView.setOnMouseDragged(mouseHandler);
-        imageView.setOnMouseReleased(mouseHandler);
-        return imageView;
-    }
     
     
     /**
@@ -179,7 +153,7 @@ public class CertificateUtils {
         CertificateWrapper wrapper = tab.getCertificateWrapper();
         ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
         wrapper.setCertificateFields(certificateFieldList);
-        System.out.println("populated wrapper :" + wrapper);
+//        System.out.println("populated wrapper :\n" + wrapper); // very helpful debug
         createCertificateFile(file, wrapper);
         tab.setChanged(false);
 //        tab.setFile(file); // done at an upper level
@@ -246,13 +220,15 @@ public class CertificateUtils {
      * @return 
      */
     public File correctXmlExtension(File file) {
-        String path = file.getAbsolutePath();
-        if(!path.endsWith(".xml")) {
-//            System.out.print("correcting file extension... , previous path : "+ path ); // debug
-            path = path.concat(".xml");
-//            System.out.println(" , corrected path : " + path); // debug
-        }
-        return new File(path);
+        if(file != null) {
+            String path = file.getAbsolutePath();
+            if(!path.endsWith(".xml")) {
+    //            System.out.print("correcting file extension... , previous path : "+ path ); // debug
+                path = path.concat(".xml");
+    //            System.out.println(" , corrected path : " + path); // debug
+            }
+            return new File(path);
+        } else return null; // new null pointer fix
     }
     
     public Task createWorker() {
@@ -289,6 +265,20 @@ public class CertificateUtils {
             path = path.concat(".jpg");
         }
         return new File(path);
+    }
+    
+    public FileChooser getXMLFileChooser() {
+        FileChooser fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter extensionFilter = new FileChooser.ExtensionFilter("XML Files (*.xml)", "*.xml");
+        fileChooser.getExtensionFilters().add(extensionFilter);
+        return fileChooser;
+    }
+    
+    public FileChooser getImageFileChooser() {
+        FileChooser fileChooser = new FileChooser();
+        FileChooser.ExtensionFilter extensionFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
+        fileChooser.getExtensionFilters().add(extensionFilter);
+        return fileChooser;
     }
     
 }

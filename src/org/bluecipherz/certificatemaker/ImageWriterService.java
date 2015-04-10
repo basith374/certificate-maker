@@ -42,8 +42,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.event.IIOWriteProgressListener;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.imageio.stream.ImageOutputStream;
 
 /**
@@ -144,6 +146,10 @@ public class ImageWriterService {
                     Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(defaultExtension);
                     ImageWriter writer = writers.next(); 
                     writer.setOutput(ios);
+                    // compression
+                    ImageWriteParam iwp = writer.getDefaultWriteParam();
+                    JPEGImageWriteParam  jiwp = (JPEGImageWriteParam) iwp;
+                    // TODO lossless compression
                     writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
                         @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
                         // Only this method is used to send progress to task

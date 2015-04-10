@@ -49,6 +49,7 @@ public class Launcher extends Application {
     @Override public void start(final Stage initStage) throws Exception {
         showSplash(initStage);
 
+        // wait for two seconds and show the main stage
         PauseTransition pause = new PauseTransition(Duration.seconds(2));
         pause.setOnFinished(new EventHandler<ActionEvent>() {
             @Override
