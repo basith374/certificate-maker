@@ -1,6 +1,19 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright BCZ Inc. 2015.
+ * This file is part of Certificate Maker.
+ *
+ * Certificate Maker is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Certificate Maker is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Certificate Maker.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bluecipherz.certificatemaker;
 
@@ -37,7 +50,8 @@ public class ResourceManger {
     public Image iconx16;
     public Image iconx32;
     public Image iconx48;
-    public Image splash;
+    public Image premiumsplash;
+    public Image demosplash;
     public Image avatarx32;
     public Image avatarx320;
     public Image errorx16;
@@ -94,7 +108,8 @@ public class ResourceManger {
     }
     
     public void loadSplashResource() {
-        this.splash = new Image(getClass().getResourceAsStream("icons/splash.png"));
+        this.premiumsplash = new Image(getClass().getResourceAsStream("icons/premiumsplash.png"));
+        this.demosplash = new Image(getClass().getResourceAsStream("icons/demosplash.png"));
     }
     
 }

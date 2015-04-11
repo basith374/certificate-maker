@@ -1,6 +1,19 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright BCZ Inc. 2015.
+ * This file is part of Certificate Maker.
+ *
+ * Certificate Maker is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Certificate Maker is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Certificate Maker.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bluecipherz.certificatemaker;
 
@@ -129,10 +142,10 @@ class LabelDialog extends Stage {
                         if(previousType == FieldType.COURSEDETAILS) textHolder.setCourseDetailsFieldAdded(false);
                     }
                     boolean editisvalid = true;
-                    if(field.getFieldType() == FieldType.DATE) if(textHolder.isDateFieldAdded()) editisvalid = false;
-                    if(field.getFieldType() == FieldType.REGNO) if(textHolder.isRegnoFieldAdded()) editisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSE) if(textHolder.isCourseFieldAdded()) editisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSEDETAILS) if(textHolder.isCourseDetailsFieldAdded()) editisvalid = false;
+                    if(field.getFieldType() == FieldType.DATE) if(textHolder.isDateFieldAdded() && previousType != FieldType.DATE) editisvalid = false;
+                    if(field.getFieldType() == FieldType.REGNO) if(textHolder.isRegnoFieldAdded() && previousType != FieldType.REGNO) editisvalid = false;
+                    if(field.getFieldType() == FieldType.COURSE) if(textHolder.isCourseFieldAdded() && previousType != FieldType.COURSE) editisvalid = false;
+                    if(field.getFieldType() == FieldType.COURSEDETAILS) if(textHolder.isCourseDetailsFieldAdded() && previousType != FieldType.COURSEDETAILS) editisvalid = false;
                     if(editisvalid) {
                         subjectText.setCertificateField(field);
                         close();
@@ -146,13 +159,6 @@ class LabelDialog extends Stage {
                 CertificateField field = generateCertificateField(newX, newY);
                 subjectText = window.createText(field); // generate new text
                 Group group = (Group) ((ScrollPane)textHolder.getContent()).getContent();
-                // disallow multiple fields(single type)
-                if(disallowmultiplefields) {
-                    if(field.getFieldType() == FieldType.DATE) textHolder.setDateFieldAdded(true);
-                    if(field.getFieldType() == FieldType.REGNO) textHolder.setRegnoFieldAdded(true);
-                    if(field.getFieldType() == FieldType.COURSE) textHolder.setCourseFieldAdded(true);
-                    if(field.getFieldType() == FieldType.COURSEDETAILS) textHolder.setCourseDetailsFieldAdded(true);
-                }
                 
                 System.out.println("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
                 if(field.getFieldType() == FieldType.TEXT) {
@@ -169,6 +175,13 @@ class LabelDialog extends Stage {
                     if(field.getFieldType() == FieldType.COURSEDETAILS) if(textHolder.isCourseDetailsFieldAdded()) entryisvalid = false;
                     if(entryisvalid) {
                         group.getChildren().add(subjectText);
+                        // disallow multiple fields(single type)
+                        if(disallowmultiplefields) {
+                            if(field.getFieldType() == FieldType.DATE) textHolder.setDateFieldAdded(true);
+                            if(field.getFieldType() == FieldType.REGNO) textHolder.setRegnoFieldAdded(true);
+                            if(field.getFieldType() == FieldType.COURSE) textHolder.setCourseFieldAdded(true);
+                            if(field.getFieldType() == FieldType.COURSEDETAILS) textHolder.setCourseDetailsFieldAdded(true);
+                        }
                         close();
                     }
                     else Alert.showAlertError(owner, "Error", field.getFieldType().toString() + " already added");
@@ -460,6 +473,7 @@ class LabelDialog extends Stage {
         if (fontStyle != null) {
             fontStyleBox.getSelectionModel().select(window.getFontStyleList().indexOf(fontStyle));
         }
+        
     }
 
     
@@ -504,6 +518,8 @@ class LabelDialog extends Stage {
     }
 
     private void loadAlreadyAvailableContents() {
+        list.getItems().clear();
+        desclist.getItems().clear();
         if(textHolder != null) {
             for(CertificateField field : textHolder.getCertificateWrapper().getCertificateFields()) {
                 if(field.getFieldType() == FieldType.COURSE) {

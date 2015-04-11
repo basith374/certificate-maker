@@ -1,3 +1,20 @@
+/*
+ * Copyright BCZ Inc. 2015.
+ * This file is part of Certificate Maker.
+ *
+ * Certificate Maker is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Certificate Maker is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Certificate Maker.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package org.bluecipherz.certificatemaker;
 //import com.google.gson.Gson;
 import com.sun.deploy.resources.ResourceManager;
@@ -111,6 +128,7 @@ public class Window  {
     private Label statusLabel;
     private HBox statusBar;
     private Label messageLabel;
+    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
 
     private TextField getTextField(FileChooser fileChooser) {
         LinkedList<Object> queue = new LinkedList<>();
@@ -300,7 +318,7 @@ public class Window  {
         menuBar.prefWidthProperty().bind(borderPane.widthProperty()); // TODO dependency
 
         // FILE MENU
-        Menu fileMenu = new Menu("_File");
+        Menu fileMenu = new Menu("File");
 
         MenuItem newMenu = new MenuItem("New Template");
         MenuItem newCertificateMenu = new MenuItem("New Certificate");
@@ -351,18 +369,18 @@ public class Window  {
         menuBar.getMenus().add(fileMenu);
 
         // OUTPUT MENU
-        Menu outputMenu = new Menu("_Output");
+        Menu outputMenu = new Menu("Output");
         
         
-        CheckMenuItem a3outputMenu = new CheckMenuItem("_A3 Output");
+        CheckMenuItem a3outputMenu = new CheckMenuItem("A3 Output");
         a3outputMenu.setSelected(UserDataManager.isA3Output());
         ToggleGroup toggleGroup = new ToggleGroup();
         RadioMenuItem jpgMenu = RadioMenuItemBuilder.create()
-                .text("_JPG Format")
+                .text("JPG Format")
                 .toggleGroup(toggleGroup)
                 .build();
         RadioMenuItem pngMenu = RadioMenuItemBuilder.create()
-                .text("_PNG Format")
+                .text("PNG Format")
                 .toggleGroup(toggleGroup)
                 .build();
         if("jpg".equalsIgnoreCase(UserDataManager.getDefaultImageFormat())) {
@@ -384,7 +402,7 @@ public class Window  {
         menuBar.getMenus().add(outputMenu);
         
         // HELP MENU
-        Menu helpMenu = new Menu("_Help");
+        Menu helpMenu = new Menu("Help");
         
         MenuItem aboutMenu = new MenuItem("About");
         aboutMenu.setGraphic(new ImageView(ResourceManger.getInstance().iconx16));
@@ -983,7 +1001,7 @@ public class Window  {
                     initialY = event.getY();
                     if(getMouseMode() == MouseMode.ADD) {
                         showNewFieldDialog(tab, new Point2D(event.getX(), event.getY()));
-                    } else {
+                    } else if(getMouseMode() == MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
                         group.getChildren().add(adjXline);
                         group.getChildren().add(adjYline);
                         group.getChildren().add(oppYline);
@@ -1011,25 +1029,27 @@ public class Window  {
 //                    adjXline.setEndX(event.getX());
 //                    adjXline.setStartY(initialY);
 //                    adjXline.setEndY(event.getY());
-                    adjXline.setStartX(event.getX());
-                    adjXline.setEndX(event.getX());
-                    adjXline.setStartY(event.getY());
-                    adjXline.setEndY(initialY);
-                    
-                    adjYline.setStartX(initialX);
-                    adjYline.setEndX(event.getX());
-                    adjYline.setStartY(event.getY());
-                    adjYline.setEndY(event.getY());
-                    
-                    oppXline.setStartX(initialX);
-                    oppXline.setEndX(event.getX());
-                    oppXline.setStartY(initialY);
-                    oppXline.setEndY(initialY);
-                    
-                    oppYline.setStartX(initialX);
-                    oppYline.setEndX(initialX);
-                    oppYline.setStartY(initialY);
-                    oppYline.setEndY(event.getY());
+                    if(getMouseMode() == MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
+                        adjXline.setStartX(event.getX());
+                        adjXline.setEndX(event.getX());
+                        adjXline.setStartY(event.getY());
+                        adjXline.setEndY(initialY);
+
+                        adjYline.setStartX(initialX);
+                        adjYline.setEndX(event.getX());
+                        adjYline.setStartY(event.getY());
+                        adjYline.setEndY(event.getY());
+
+                        oppXline.setStartX(initialX);
+                        oppXline.setEndX(event.getX());
+                        oppXline.setStartY(initialY);
+                        oppXline.setEndY(initialY);
+
+                        oppYline.setStartX(initialX);
+                        oppYline.setEndX(initialX);
+                        oppYline.setStartY(initialY);
+                        oppYline.setEndY(event.getY());
+                    }
                     
                 } else if(type.equals(MouseEvent.MOUSE_RELEASED)) {
                     if(getMouseMode() == MouseMode.ADD_IMAGE) {
@@ -1121,6 +1141,7 @@ public class Window  {
             public void handle(MouseEvent event) {
                 EventType<? extends Event> eventType = event.getEventType();
                 CertificateText text = (CertificateText) event.getSource();
+                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
                     if(Window.getMouseMode() == MouseMode.MOVE) {
                         initialComponentX = text.getX();
@@ -1132,9 +1153,14 @@ public class Window  {
                         Group parent = (Group) text.getParent();
                         parent.getChildren().remove(text);
                         System.out.println("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
+                        FieldType type = text.getCertificateField().getFieldType();
+                        if(type == FieldType.DATE) tab.setDateFieldAdded(false);
+                        if(type == FieldType.REGNO) tab.setRegnoFieldAdded(false);
+                        if(type == FieldType.COURSE) tab.setCourseFieldAdded(false);
+                        if(type == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(false);
 //                        System.out.println("Mode : delete"); // debug
                     } else if (Window.getMouseMode() == MouseMode.EDIT) {
-                        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+                        
                         showEditFieldDialog(tab, text);
 //                        System.out.println("Mode : edit"); // debug
                     }
@@ -1248,6 +1274,12 @@ public class Window  {
                     CertificateText certificateText = createText(certificateField);
                     certificateText.setX(certificateField.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
                     group.getChildren().add(certificateText);
+                    if(disallowmultiplefields) {
+                        if(certificateField.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
+                        if(certificateField.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
+                        if(certificateField.getFieldType() == FieldType.COURSE) tab.setCourseFieldAdded(true);
+                        if(certificateField.getFieldType() == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(disallowmultiplefields);
+                    }
                 }
             }
         }
@@ -1264,6 +1296,32 @@ public class Window  {
 //        refreshTabPaneEventHandlers();
 
         tab.setCertificateWrapper(certificateWrapper); // fixture
+        
+        tab.dateFieldProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                System.out.println("date field added :" + tab.isDateFieldAdded());
+            }
+        });
+        tab.regnoFieldProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                System.out.println("regno field added :" + tab.isRegnoFieldAdded());
+            }
+        });
+        tab.courseFieldProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                System.out.println("course field added :" + tab.isCourseFieldAdded());
+            }
+        });
+        tab.courseDetailsFieldProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                System.out.println("course details field added :" + tab.isCourseDetailsFieldAdded());
+            }
+        });
+        
         return tab;
     }
     

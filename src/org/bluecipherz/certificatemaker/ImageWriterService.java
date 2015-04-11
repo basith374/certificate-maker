@@ -1,6 +1,19 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright BCZ Inc. 2015.
+ * This file is part of Certificate Maker.
+ *
+ * Certificate Maker is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Certificate Maker is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Certificate Maker.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bluecipherz.certificatemaker;
 
@@ -41,6 +54,7 @@ import javafx.event.EventHandler;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
@@ -145,11 +159,14 @@ public class ImageWriterService {
                     System.out.println("image writers format " + defaultExtension); // debug
                     Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(defaultExtension);
                     ImageWriter writer = writers.next(); 
+                    // lossless compression
+//                    ImageWriteParam iwp = writer.getDefaultWriteParam();
+//                    if("jpg".equalsIgnoreCase(defaultExtension)) {
+//                        System.out.println("JPEG Lossless compression...");
+//                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+//                        iwp.setCompressionType("JPEG-LS");
+//                    }
                     writer.setOutput(ios);
-                    // compression
-                    ImageWriteParam iwp = writer.getDefaultWriteParam();
-                    JPEGImageWriteParam  jiwp = (JPEGImageWriteParam) iwp;
-                    // TODO lossless compression
                     writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
                         @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
                         // Only this method is used to send progress to task
@@ -161,6 +178,8 @@ public class ImageWriterService {
                         @Override public void writeAborted(ImageWriter source) {}
                     });
                     writer.write(bufferedImage);
+//                    writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
+                    System.out.println("disposing write sequence");
                     writer.dispose();
                 }
                 return null;
@@ -194,7 +213,9 @@ public class ImageWriterService {
                 if(certificateImage == null) System.out.println("Shit rain!"); // debug
                 BufferedImage img1 = ImageUtils.createBufferedImage(certificateImage, queue.fields);
                 BufferedImage img2 = ImageUtils.createBufferedImage(certificateImage, order.fields);
+                System.out.println("created two buffered images..."); // debug
                 BufferedImage combined = ImageUtils.combineImages(img1, img2);
+                System.out.println("combined two images");
                 /* a lil messy below */
                 String combinedName = queue.saveName + order.saveName; // TODO save name for combined image
                 File saveFile = new File(queue.savePath + File.separatorChar + combinedName); // assuming both are to saved in same location
