@@ -411,7 +411,7 @@ class LabelDialog extends Stage {
         textHolder = tab;
 //        getScene().setCursor(Cursor.DEFAULT);
 //        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
-        loadAlreadyAvailableContents(tab); // courses not loading bug fix
+//        loadAlreadyAvailableContents(tab); // courses not loading bug fix
         setTitle("New entry");
         asklabel.setText(NEW_TEXT);
         newX = (int) point.getX();
@@ -425,7 +425,7 @@ class LabelDialog extends Stage {
 
     public void prepareAndShowEditTextDialog(CertificateTab tab, CertificateText text) {
         textHolder = tab;
-        loadAlreadyAvailableContents(tab); // courses not loading bug fix
+//        loadAlreadyAvailableContents(tab); // courses not loading bug fix
 //        getScene().setCursor(Cursor.DEFAULT);
 //        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
         setTitle("Edit entry");
@@ -536,7 +536,7 @@ class LabelDialog extends Stage {
             list.getItems().clear();
             desclist.getItems().clear();
         }
-        for(CertificateField field : tab.getCertificateWrapper().getCertificateFields()) {
+        for(CertificateField field : tab.getWrapper().getCertificateFields()) {
             if(field.getFieldType() == FieldType.COURSE) {
                 System.out.println("changing courses");
                 if(!field.getCourses().isEmpty()) list.setItems(FXCollections.observableArrayList(field.getCourses()));

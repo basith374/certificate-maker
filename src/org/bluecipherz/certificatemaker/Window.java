@@ -128,7 +128,7 @@ public class Window  {
     private Label statusLabel;
     private HBox statusBar;
     private Label messageLabel;
-    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
+//    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
 
     private TextField getTextField(FileChooser fileChooser) {
         LinkedList<Object> queue = new LinkedList<>();
@@ -959,7 +959,7 @@ public class Window  {
     public void openCreateCertificateDialog() {
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1){
-            CertificateWrapper wrapper = ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).getCertificateWrapper();
+            CertificateWrapper wrapper = ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).getWrapper();
             if(CREATECERTIFICATE_DIALOG == null) {
                 CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
             }
@@ -973,112 +973,6 @@ public class Window  {
     /*****************
      * EVENT HANDLERS
      ****************/
-    
-    /**
-     * get mouse handlers fort the image view
-     * @param dialog
-     * @return 
-     */
-    private EventHandler<MouseEvent> getImageMouseHandler(){
-        return new EventHandler<MouseEvent>() {
-            double initialX;
-            double initialY;
-            Line adjXline = getStrokedLine();
-            Line adjYline = getStrokedLine();
-            Line oppXline = getStrokedLine();
-            Line oppYline = getStrokedLine();
-            @Override
-            public void handle(MouseEvent event) {
-                ImageView imageView = (ImageView) event.getSource();
-                Group group = (Group) imageView.getParent();
-                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
-                EventType<? extends Event> type = event.getEventType();
-                if(type.equals(MouseEvent.MOUSE_CLICKED))
-                    System.out.println("clicked : x" + event.getX() + ", y" + event.getY() + ", " + type.toString()); // debug
-                
-                if(type.equals(MouseEvent.MOUSE_PRESSED)) {
-                    initialX = event.getX();
-                    initialY = event.getY();
-                    if(getMouseMode() == MouseMode.ADD) {
-                        showNewFieldDialog(tab, new Point2D(event.getX(), event.getY()));
-                    } else if(getMouseMode() == MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
-                        group.getChildren().add(adjXline);
-                        group.getChildren().add(adjYline);
-                        group.getChildren().add(oppYline);
-                        group.getChildren().add(oppXline);
-                        
-                        adjXline.setStartX(initialX);
-                        adjXline.setStartY(initialY);
-                        adjXline.setEndX(initialX);
-                        adjXline.setEndY(initialY);
-                        adjYline.setStartX(initialX);
-                        adjYline.setStartY(initialY);
-                        adjYline.setEndX(initialX);
-                        adjYline.setEndY(initialY);
-                        oppXline.setStartX(initialX);
-                        oppXline.setStartY(initialY);
-                        oppXline.setEndX(initialX);
-                        oppXline.setEndY(initialY);
-                        oppYline.setStartX(initialX);
-                        oppYline.setStartY(initialY);
-                        oppYline.setEndX(initialX);
-                        oppYline.setEndY(initialY);
-                    }
-                } else if(type.equals(MouseEvent.MOUSE_DRAGGED)) {
-//                    adjXline.setStartX(initialX);
-//                    adjXline.setEndX(event.getX());
-//                    adjXline.setStartY(initialY);
-//                    adjXline.setEndY(event.getY());
-                    if(getMouseMode() == MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
-                        adjXline.setStartX(event.getX());
-                        adjXline.setEndX(event.getX());
-                        adjXline.setStartY(event.getY());
-                        adjXline.setEndY(initialY);
-
-                        adjYline.setStartX(initialX);
-                        adjYline.setEndX(event.getX());
-                        adjYline.setStartY(event.getY());
-                        adjYline.setEndY(event.getY());
-
-                        oppXline.setStartX(initialX);
-                        oppXline.setEndX(event.getX());
-                        oppXline.setStartY(initialY);
-                        oppXline.setEndY(initialY);
-
-                        oppYline.setStartX(initialX);
-                        oppYline.setEndX(initialX);
-                        oppYline.setStartY(initialY);
-                        oppYline.setEndY(event.getY());
-                    }
-                    
-                } else if(type.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(getMouseMode() == MouseMode.ADD_IMAGE) {
-                        if(!tab.isAvatarFieldAdded()) {
-                            if(initialX == event.getX() && initialY == event.getY()) {
-                                System.out.println("clicked, showing avatar dialog"); // debug
-                                showAvatarAddDialog(tab, new Point2D(event.getX(), event.getY()));
-                            } else {
-                                System.out.println("released, calculating avatar size"); // debug
-                                addAvatar(tab, new Point2D(initialX, initialY), new Point2D(event.getX(), event.getY()));
-                            }
-                        } else {
-                            Alert.showAlertInfo(PRIMARY_STAGE, "Info", "Avatar already added"); // temporarily commented
-                        }
-                    }
-                    group.getChildren().remove(adjXline);
-                    group.getChildren().remove(oppXline);
-                    group.getChildren().remove(adjYline);
-                    group.getChildren().remove(oppYline);
-                }
-            }
-            
-            private Line getStrokedLine() {
-                Line line = new Line();
-                line.getStrokeDashArray().addAll(3d, 3d);
-                return line;
-            }
-        };
-    }
     
     public EventHandler<MouseEvent> getAvatarMouseHandler() {
         return new EventHandler<MouseEvent>() {
@@ -1219,75 +1113,79 @@ public class Window  {
      * @param certificateWrapper
      */
     public CertificateTab createNewTab(final CertificateWrapper wrapper) {
+        if(CertificateTab.getPRIMARY_STAGE() == null) CertificateTab.setPRIMARY_STAGE(PRIMARY_STAGE);
+        if(CertificateTab.getWINDOW() == null) CertificateTab.setWINDOW(this);
         final CertificateWrapper certificateWrapper = wrapper;
         //tab children heirarchy
         //tab -> scrollpane -> group -> imageview,text
-        final CertificateTab tab = new CertificateTab();
-        final File imageFile = certificateWrapper.getCertificateImage();
-        tab.setText(certificateWrapper.getName());
-        final ScrollPane scrollPane = new ScrollPane();
-        // dont know the real use of this,
-        scrollPane.viewportBoundsProperty().addListener(new ChangeListener<Bounds>() {
-            @Override
-            public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
-                Node content = scrollPane.getContent(); // content is group
-                scrollPane.setFitToWidth(content.prefWidth(-1)<t1.getWidth());
-                scrollPane.setFitToHeight(content.prefHeight(-1)<t1.getHeight());
-            }
-        });
+        final CertificateTab tab = new CertificateTab(wrapper);
+        LOADINGBOX.showProgressing(tab.loadImage());
+//        
+//        final File imageFile = certificateWrapper.getCertificateImage();
+//        tab.setText(certificateWrapper.getName());
+//        final ScrollPane scrollPane = new ScrollPane();
+//        // dont know the real use of this,
+//        scrollPane.viewportBoundsProperty().addListener(new ChangeListener<Bounds>() {
+//            @Override
+//            public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
+//                Node content = scrollPane.getContent(); // content is group
+//                scrollPane.setFitToWidth(content.prefWidth(-1)<t1.getWidth());
+//                scrollPane.setFitToHeight(content.prefHeight(-1)<t1.getHeight());
+//            }
+//        });
+//        
+//        Group group = new Group();
         
-        Group group = new Group();
+//        final ImageView imageView = new ImageView(); // fixture
+//        final Image image = new Image(imageFile.toURI().toString(), true);
+////        progressBar.progressProperty().bind(image.progressProperty());
+////        addProgressBar();
+//        LOADINGBOX.showProgressing(image.progressProperty());
+//        image.progressProperty().addListener(new ChangeListener<Number>() {
+//            @Override
+//            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
+////                System.out.println("oldvalue " + oldValue.toString() + ", newvalue " + newValue.toString());
+////                statusLabel.setText("Loading : " + (int) newValue.doubleValue() + "%");
+//                if(newValue.intValue() == 1) {
+//                    imageView.setImage(image);
+////                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
+////                    removeProgressBar();
+//                }
+//            }
+//
+//        });
+//        EventHandler<MouseEvent> handler = getImageMouseHandler();
+//        imageView.setOnMousePressed(handler);
+//        imageView.setOnMouseDragged(handler);
+//        imageView.setOnMouseReleased(handler);
         
-        final ImageView imageView = new ImageView(); // fixture
-        final Image image = new Image(imageFile.toURI().toString(), true);
-//        progressBar.progressProperty().bind(image.progressProperty());
-//        addProgressBar();
-        LOADINGBOX.showProgressing(image.progressProperty());
-        image.progressProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-//                System.out.println("oldvalue " + oldValue.toString() + ", newvalue " + newValue.toString());
-//                statusLabel.setText("Loading : " + (int) newValue.doubleValue() + "%");
-                if(newValue.intValue() == 1) {
-                    imageView.setImage(image);
-//                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
-//                    removeProgressBar();
-                }
-            }
-
-        });
-        EventHandler<MouseEvent> handler = getImageMouseHandler();
-        imageView.setOnMousePressed(handler);
-        imageView.setOnMouseDragged(handler);
-        imageView.setOnMouseReleased(handler);
-        
-        group.getChildren().add(imageView);
+//        group.getChildren().add(imageView);
         // after adding the imageview, add the fields to the opened certificate if there are any
-        if(!certificateWrapper.getCertificateFields().isEmpty()) {   
-            for (CertificateField certificateField : wrapper.getCertificateFields()) {
-                if(certificateField.getFieldType() == FieldType.IMAGE) {
-                    // add avatar image
-                    ImageView avatarImage = createAvatarImage(certificateField.getX(), certificateField.getY(), certificateField.getWidth(), certificateField.getHeight());
-                    group.getChildren().add(avatarImage);
-                    tab.setAvatarFieldAdded(true);
-                } else { // its a text object as long as its not an image
-                    CertificateText certificateText = createText(certificateField);
-                    certificateText.setX(certificateField.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
-                    group.getChildren().add(certificateText);
-                    if(disallowmultiplefields) {
-                        if(certificateField.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
-                        if(certificateField.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
-                        if(certificateField.getFieldType() == FieldType.COURSE) tab.setCourseFieldAdded(true);
-                        if(certificateField.getFieldType() == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(disallowmultiplefields);
-                    }
-                }
-            }
-        }
+//        if(!certificateWrapper.getCertificateFields().isEmpty()) {   
+//            for (CertificateField certificateField : wrapper.getCertificateFields()) {
+//                if(certificateField.getFieldType() == FieldType.IMAGE) {
+//                    // add avatar image
+//                    ImageView avatarImage = createAvatarImage(certificateField.getX(), certificateField.getY(), certificateField.getWidth(), certificateField.getHeight());
+//                    group.getChildren().add(avatarImage);
+//                    tab.setAvatarFieldAdded(true);
+//                } else { // its a text object as long as its not an image
+//                    CertificateText certificateText = createText(certificateField);
+//                    certificateText.setX(certificateField.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
+//                    group.getChildren().add(certificateText);
+//                    if(disallowmultiplefields) {
+//                        if(certificateField.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
+//                        if(certificateField.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
+//                        if(certificateField.getFieldType() == FieldType.COURSE) tab.setCourseFieldAdded(true);
+//                        if(certificateField.getFieldType() == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(disallowmultiplefields);
+//                    }
+//                }
+//            }
+//        }
 //        imageView.setFitHeight(scrollPane.getHeight());
 //        imageView.setFitWidth(scrollPane.getWidth());        
-        scrollPane.setContent(group);
-        System.out.println("Adding to scrollpane " + scrollPane.toString()); // debug
-        tab.setContent(scrollPane);
+//        scrollPane.setContent(group);
+//        System.out.println("Adding to scrollpane " + scrollPane.toString()); // debug
+//        tab.setContent(scrollPane);
 //        System.out.println("adding tab to tabpane"); // debug
         tabPane.getTabs().add(tab);
         
@@ -1295,7 +1193,7 @@ public class Window  {
         // TODO before tab close action
 //        refreshTabPaneEventHandlers();
 
-        tab.setCertificateWrapper(certificateWrapper); // fixture
+//        tab.setCertificateWrapper(certificateWrapper); // fixture
         
         tab.dateFieldProperty().addListener(new ChangeListener<Boolean>() {
             @Override

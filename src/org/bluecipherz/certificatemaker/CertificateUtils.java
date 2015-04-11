@@ -167,7 +167,7 @@ public class CertificateUtils {
     public CertificateWrapper saveFileAtTab(CertificateTab tab, File file) {
         ScrollPane scrollPane = (ScrollPane) tab.getContent();
         Group group = (Group) scrollPane.getContent();
-        CertificateWrapper wrapper = tab.getCertificateWrapper();
+        CertificateWrapper wrapper = tab.getWrapper();
         ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
         wrapper.setCertificateFields(certificateFieldList);
 //        System.out.println("populated wrapper :\n" + wrapper); // very helpful debug
