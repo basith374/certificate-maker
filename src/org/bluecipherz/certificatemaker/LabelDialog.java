@@ -21,6 +21,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -282,6 +283,19 @@ class LabelDialog extends Stage {
         gridPane.add(fontStyleBox, 1, 6);
         fontStyleBox.getSelectionModel().select(0);
         
+        list.getItems().addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends String> change) {
+                System.out.println("course box changed : " + list.getItems().size());
+            }
+        });
+        desclist.getItems().addListener(new ListChangeListener() {
+            @Override
+            public void onChanged(ListChangeListener.Change change) {
+                System.out.println("course details changed : " + desclist.getItems().size());
+            }
+        });
+        
         button = new Button("OK");
         GridPane.setHalignment(button, HPos.RIGHT);
         gridPane.add(button, 1, 7);
@@ -393,10 +407,11 @@ class LabelDialog extends Stage {
         return certificateField;
     }
 
-    public void prepareAndShowNewTextDialog(Point2D point) {
+    public void prepareAndShowNewTextDialog(CertificateTab tab, Point2D point) {
+        textHolder = tab;
 //        getScene().setCursor(Cursor.DEFAULT);
 //        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
-        loadAlreadyAvailableContents(); // courses not loading bug fix
+        loadAlreadyAvailableContents(tab); // courses not loading bug fix
         setTitle("New entry");
         asklabel.setText(NEW_TEXT);
         newX = (int) point.getX();
@@ -408,10 +423,11 @@ class LabelDialog extends Stage {
         show();
     }
 
-    public void prepareAndShowEditTextDialog(CertificateText text) {
+    public void prepareAndShowEditTextDialog(CertificateTab tab, CertificateText text) {
+        textHolder = tab;
+        loadAlreadyAvailableContents(tab); // courses not loading bug fix
 //        getScene().setCursor(Cursor.DEFAULT);
 //        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
-        loadAlreadyAvailableContents(); // courses not loading bug fix
         setTitle("Edit entry");
         asklabel.setText(EDIT_TEXT);
         subjectText = text;
@@ -504,10 +520,6 @@ class LabelDialog extends Stage {
         return menu;
     }
 
-    public void setTextHolder(CertificateTab textHolder) {
-        this.textHolder = textHolder;
-    }
-
     private ListView createNewListView() {
         ListView<String> list = new ListView();
         list.setEditable(true);
@@ -517,17 +529,20 @@ class LabelDialog extends Stage {
         return list;
     }
 
-    private void loadAlreadyAvailableContents() {
-        list.getItems().clear();
-        desclist.getItems().clear();
-        if(textHolder != null) {
-            for(CertificateField field : textHolder.getCertificateWrapper().getCertificateFields()) {
-                if(field.getFieldType() == FieldType.COURSE) {
-                    if(!field.getCourses().isEmpty()) list.setItems(FXCollections.observableArrayList(field.getCourses()));
-                }
-                if(field.getFieldType() == FieldType.COURSEDETAILS) {
-                    if(!field.getCoursesDetails().isEmpty()) desclist.setItems(FXCollections.observableArrayList(field.getCoursesDetails()));
-                }
+    private void loadAlreadyAvailableContents(CertificateTab tab) {
+//        System.out.println("Before clear items : textholder contents " + textHolder.getCertificateWrapper().getCertificateFields().size()); // debug
+        if(!textHolder.equals(tab)) {
+            System.out.println("tab changed, clearing items...");
+            list.getItems().clear();
+            desclist.getItems().clear();
+        }
+        for(CertificateField field : tab.getCertificateWrapper().getCertificateFields()) {
+            if(field.getFieldType() == FieldType.COURSE) {
+                System.out.println("changing courses");
+                if(!field.getCourses().isEmpty()) list.setItems(FXCollections.observableArrayList(field.getCourses()));
+            } else if(field.getFieldType() == FieldType.COURSEDETAILS) {
+                System.out.println("changing course details");
+                if(!field.getCoursesDetails().isEmpty()) desclist.setItems(FXCollections.observableArrayList(field.getCoursesDetails()));
             }
         }
     }

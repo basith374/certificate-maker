@@ -40,6 +40,7 @@ public class CertificateTab extends Tab {
     
     private BooleanProperty changed;
     
+    
 //    private boolean courseFieldAdded;
 //    private boolean courseDetailsFieldAdded;
 //    private boolean avatarFieldAdded;

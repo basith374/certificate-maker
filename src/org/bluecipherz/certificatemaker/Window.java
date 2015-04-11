@@ -1374,16 +1374,14 @@ public class Window  {
         if(LABEL_DIALOG == null) {
             LABEL_DIALOG = new LabelDialog(PRIMARY_STAGE, Window.this);
         }
-        LABEL_DIALOG.setTextHolder(tab); // tab bug fix
-        LABEL_DIALOG.prepareAndShowNewTextDialog(point);
+        LABEL_DIALOG.prepareAndShowNewTextDialog(tab, point);
     }
     
     public void showEditFieldDialog(CertificateTab tab, CertificateText text) {
         if(LABEL_DIALOG == null) {
             LABEL_DIALOG = new LabelDialog(PRIMARY_STAGE, Window.this);
         }
-        LABEL_DIALOG.setTextHolder(tab);
-        LABEL_DIALOG.prepareAndShowEditTextDialog(text);
+        LABEL_DIALOG.prepareAndShowEditTextDialog(tab, text);
     }
 
 //    public static void main(String[] args) { launch(args); }
