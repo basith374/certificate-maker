@@ -47,7 +47,7 @@ public class AvatarDialog extends Stage {
 
     private Stage primaryStage;
     private Window window;
-    private CertificateTab imageHolder;
+    private CertificateTab tab;
     
     private int imageX;
     private int imageY;
@@ -69,12 +69,10 @@ public class AvatarDialog extends Stage {
                 int width = Integer.parseInt(widthField.getText());
                 int height = Integer.parseInt(heightField.getText());
                 if(width > 0 && height > 0) {
-                    ImageView image = window.createAvatarImage(imageX, imageY, width, height);
-
-                    Group group = (Group) ((ScrollPane)imageHolder.getContent()).getContent();
-
-                    group.getChildren().add(image);
-                    imageHolder.setAvatarFieldAdded(true);
+                    CertificateField field = generateCertificateField(imageX, imageY, width, height);
+                    ImageView image = tab.createAvatarImage(field);
+                    tab.addImage(image, field);
+                    tab.setAvatarFieldAdded(true);
                     close();
                 } // else give positive number
             } else {
@@ -90,11 +88,8 @@ public class AvatarDialog extends Stage {
                 int width = Integer.parseInt(widthField.getText());
                 int height = Integer.parseInt(heightField.getText());
                 if(width > 0 && height > 0) {
-                    ImageView image = window.createAvatarImage(imageX, imageY, width, height);
-                    Group group = (Group) ((ScrollPane)imageHolder.getContent()).getContent();
-                    group.getChildren().remove(prevImage);
-                    group.getChildren().add(image);
-                    imageHolder.setAvatarFieldAdded(true);
+                    Image image = tab.createImage(width, height);
+                    prevImage.setImage(image);
                     close();
                 } // else give positive number
             } else {
@@ -160,7 +155,7 @@ public class AvatarDialog extends Stage {
     }
     
     public void setImageHolder(CertificateTab imageHolder) {
-        this.imageHolder = imageHolder;
+        this.tab = imageHolder;
     }
     
     public void editImage(ImageView imageView) {
@@ -175,6 +170,9 @@ public class AvatarDialog extends Stage {
         show();
     }
     
+    /*
+     * click to show dialog
+     */
     public void newImage(Point2D point) {
         imageX = (int) point.getX();
         imageY = (int) point.getY();
@@ -185,17 +183,28 @@ public class AvatarDialog extends Stage {
         show();
     }
     
+    /*
+     * click and drag to draw image
+     */
     public void newImage(Point2D point, int width, int height) {
         imageX = (int) point.getX();
         imageY = (int) point.getY();
         System.out.println("adding image : x" + imageX + ", y" + imageY + ", widht" + width + ", height" + height);
 //        if(!imageHolder.isAvatarFieldAdded()) { // done at an upper level
-            ImageView image = window.createAvatarImage(imageX, imageY, width, height);
-            Group group = (Group) ((ScrollPane)imageHolder.getContent()).getContent();
-            group.getChildren().add(image);
+            CertificateField field = generateCertificateField(imageX, imageY, width, height);
+            ImageView image = tab.createAvatarImage(field);
+            tab.addImage(image, field);
             if(disallowmultipleimages)
-                imageHolder.setAvatarFieldAdded(true);
+                tab.setAvatarFieldAdded(true);
 //        }
+    }
+    
+    public CertificateField generateCertificateField(int x, int y, int width, int height) {
+        CertificateField field = new CertificateField(x, y);
+        field.setFieldType(FieldType.IMAGE);
+        field.setWidth(width);
+        field.setHeight(height);
+        return field;
     }
     
 }

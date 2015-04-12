@@ -92,9 +92,9 @@ public class NewCertificateDialog extends Stage {
         gridPane.add(radioButton2, 1, 1);
         gridPane.add(label3, 2, 1);
         gridPane.add(pathField, 2, 2);
-        gridPane.add(browseButton, 4, 2);
-        gridPane.add(cancelButton, 3, 3);
-        gridPane.add(okButton, 4, 3);
+        gridPane.add(browseButton, 3, 2);
+        gridPane.add(cancelButton, 2, 3);
+        gridPane.add(okButton, 3, 3);
         
         CertificateUtils cu = new CertificateUtils();
         fileChooser = cu.getXMLFileChooser();

@@ -220,7 +220,7 @@ class CreateCertificateDialog extends Stage {
         Node previousNode;
         for (CertificateField certificateField : wrapper.getCertificateFields()) {
             Label label;
-            if(certificateField.getFieldType() == FieldType.TEXT){
+            if(certificateField.getFieldType() == FieldType.TEXT || certificateField.getFieldType() == FieldType.ARRAY) {
                 label = new Label(certificateField.getFieldName() + " : ");
                 System.out.println("Adding TEXT : " + certificateField.getFieldName()); // debug
             } else {
@@ -237,9 +237,9 @@ class CreateCertificateDialog extends Stage {
                 dataHolders.add(avatarPathField); // save a copy for printing later
                 Button browseButton = getBrowseButton();
                 gridPane.add(browseButton, 2, row);
-            } else if(certificateField.getFieldType() == FieldType.COURSE){
-                System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
-                ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
+            } else if(certificateField.getFieldType() == FieldType.ARRAY) {
+//                System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
+                ObservableList<String> list = FXCollections.observableArrayList(certificateField.getArray());
                 ComboBox<String> box = new ComboBox(list);
                 box.setMinWidth(FIELD_WIDTH);
 //                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
@@ -254,18 +254,6 @@ class CreateCertificateDialog extends Stage {
                 box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
                 gridPane.add(box, 1, row);
                 dataHolders.add(box); // save a copy for printing later
-                box.getSelectionModel().select(0);
-            } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
-                ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
-                ComboBox<String> box = new ComboBox<>(list);
-                box.setMinWidth(FIELD_WIDTH);
-//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
-//                box.setOnAction(getComboActionTraverse()); // TODO action traverse
-//                box.setOnKeyPressed(actionTraverse); // doesnt work
-//                box.setOnAction(actionComboTraverse); // not good
-                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
-                gridPane.add(box, 1, row);
-                dataHolders.add(box);
                 box.getSelectionModel().select(0);
             } else if(certificateField.getFieldType() == FieldType.TEXT){
 //                TextField textField = new TextField();
@@ -323,9 +311,9 @@ class CreateCertificateDialog extends Stage {
         String savename = "";
         int index = 0;
         for (CertificateField field : wrapper.getCertificateFields()) {
-            if (field.getFieldType() == FieldType.COURSE || field.getFieldType() == FieldType.COURSEDETAILS || field.getFieldType() == FieldType.TEXT) {
+            if (field.getFieldType() == FieldType.ARRAY || field.getFieldType() == FieldType.TEXT) {
                 fields.put(field, ((ComboBox)dataHolders.get(index)).getSelectionModel().getSelectedItem().toString());
-            } else {
+            } else { // REGNO, DATE
                 TextField tf = (TextField)dataHolders.get(index);
                 fields.put(field, tf.getText());
                 if(field.getFieldType() == FieldType.REGNO) savename = tf.getText();
@@ -472,15 +460,9 @@ class CreateCertificateDialog extends Stage {
             TextField textField = new TextField();
             textField.setPrefWidth(FIELD_WIDTH);
             return textField;
-        } else if(fieldType == FieldType.COURSE){
-            ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCourses());
+        } else if(fieldType == FieldType.ARRAY){
+            ObservableList<String> list = FXCollections.observableArrayList(certificateField.getArray());
             ComboBox<String> box = new ComboBox(list);
-            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
-            box.setOnAction(actionComboTraverse);
-            return box;
-        } else if(certificateField.getFieldType() == FieldType.COURSEDETAILS) {
-            ObservableList<String> list = FXCollections.observableArrayList(certificateField.getCoursesDetails());
-            ComboBox<String> box = new ComboBox<>(list);
             if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
             box.setOnAction(actionComboTraverse);
             return box;

@@ -41,6 +41,7 @@ import javafx.stage.FileChooser;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
 
 /*
@@ -76,9 +77,9 @@ public class CertificateUtils {
         int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
         
 //        CertificateField field = new CertificateField(middlex, y);  // redundant
-        CertificateField field = text.getCertificateField();
-        field.setX(middlex);
-        field.setY(y);
+//        CertificateField field = text.getCertificateField();
+//        field.setX(middlex);
+//        field.setY(y);
 //        CertificateField field = new CertificateField(middlex, middley);
 //        CertificateField field = new CertificateField(x, y, text.getText(), fontSize, fontFamily, fontStyle);
 //        field.setFieldType(text.getCertificateField().getFieldType()); // redundant
@@ -94,7 +95,8 @@ public class CertificateUtils {
 //        field.setFontFamily(fontFamily);
 //        field.setFontSize(fontSize);
 //        field.setFontStyle(fontStyle); 
-        return field;
+//        return field;
+        return null;
     }
     
     public CertificateField convertToCertificateImage(Node node) {
@@ -165,11 +167,12 @@ public class CertificateUtils {
      * @param file 
      */
     public CertificateWrapper saveFileAtTab(CertificateTab tab, File file) {
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
+//        ScrollPane scrollPane = (ScrollPane) tab.getContent();
+//        Group group = (Group) scrollPane.getContent();
         CertificateWrapper wrapper = tab.getWrapper();
-        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
-        wrapper.setCertificateFields(certificateFieldList);
+        System.out.println("retrieving wrapper : total contents " + wrapper.getCertificateFields().size());
+//        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
+//        wrapper.setCertificateFields(certificateFieldList);
 //        System.out.println("populated wrapper :\n" + wrapper); // very helpful debug
         createCertificateFile(file, wrapper);
         tab.setChanged(false);

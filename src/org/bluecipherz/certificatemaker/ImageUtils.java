@@ -154,7 +154,7 @@ public class ImageUtils {
         Graphics imageGraphics = image.getGraphics();
         imageGraphics.setColor(Color.BLACK);
         for (CertificateField field : wrapper.getCertificateFields()) {
-            imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle() == Font.BOLD ? Font.BOLD : Font.PLAIN, field.getFontSize()));
+//            imageGraphics.setFont(new Font(field.getFontFamily(), field.getFontStyle() == Font.BOLD ? Font.BOLD : Font.PLAIN, field.getFontSize()));
 //            System.out.println(field.getFontFamily() + ", " + field.getFontSize() + "," + (field.isBoldText()?"Bold":"Plain")); // debug
 //            imageGraphics.drawString(field.text, field.getX(), field.getY()); // old implementation
         }
@@ -260,7 +260,13 @@ public class ImageUtils {
                 text.setText(field.getValue());
                 int x = (int) (field.getKey().getX() - text.getLayoutBounds().getWidth() / 2);
                 int y = field.getKey().getY();
-                g2.setFont(new Font(field.getKey().getFontFamily(), field.getKey().getFontStyle(), field.getKey().getFontSize()));
+                // convert fx values to awt
+                String fontFamily = field.getKey().getFontFamily();
+                String fontStyleString = field.getKey().getFontStyle();
+                int fontStyle = "Bold".equalsIgnoreCase(fontStyleString) ? Font.BOLD : Font.PLAIN;
+                int fontSize = (int) field.getKey().getFontSize();
+                // end convert
+                g2.setFont(new Font(fontFamily, fontStyle, fontSize));
                 g2.drawString(field.getValue(), x, y);
                 System.out.println("drawString(" + field.getValue() + ")"); // debug
             }

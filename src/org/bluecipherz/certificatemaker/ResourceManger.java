@@ -44,6 +44,7 @@ public class ResourceManger {
     public Image newtempx16;
     public Image newx16;
     public Image opentempx16;
+    public Image openex16;
     public Image avatarx160;
     public Image avatarx1500;
     public Image avatarx15002;
@@ -85,6 +86,7 @@ public class ResourceManger {
         this.newtempx16 = new Image(getClass().getResourceAsStream("icons/newtempx16.png"));
         this.newx16 = new Image(getClass().getResourceAsStream("icons/newx16.png"));
         this.opentempx16 = new Image(getClass().getResourceAsStream("icons/opentempx16.png"));
+        this.openex16 = new Image(getClass().getResourceAsStream("icons/openx16.png"));
         this.avatarx32 = new Image(getClass().getResourceAsStream("icons/avatarx32.png"));
         this.avatarx160 = new Image(getClass().getResourceAsStream("icons/avatarx160.png"));
         this.avatarx320 = new Image(getClass().getResourceAsStream("icons/avatarx320.png"));

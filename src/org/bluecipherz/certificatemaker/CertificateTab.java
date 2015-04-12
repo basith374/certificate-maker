@@ -27,6 +27,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.control.ScrollPane;
@@ -35,6 +36,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Line;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import static org.bluecipherz.certificatemaker.Window.getMouseMode;
 
@@ -54,8 +56,6 @@ public final class CertificateTab extends Tab {
     
     private BooleanProperty dateFieldAdded;
     private BooleanProperty regnoFieldAdded;
-    private BooleanProperty courseFieldAdded;
-    private BooleanProperty courseDetailsFieldAdded;
     private BooleanProperty avatarFieldAdded;
     
     private BooleanProperty changed;
@@ -72,8 +72,6 @@ public final class CertificateTab extends Tab {
         
         imageView = new ImageView();
         
-        courseFieldAdded = new SimpleBooleanProperty(false);
-        courseDetailsFieldAdded = new SimpleBooleanProperty(false);
         avatarFieldAdded = new SimpleBooleanProperty(false);
         dateFieldAdded = new SimpleBooleanProperty(false);
         regnoFieldAdded = new SimpleBooleanProperty(false);
@@ -90,18 +88,16 @@ public final class CertificateTab extends Tab {
         if(!wrapper.getCertificateFields().isEmpty()) {   
             for (CertificateField certificateField : wrapper.getCertificateFields()) {
                 if(certificateField.getFieldType() == FieldType.IMAGE) {
-                    ImageView avatarImage = WINDOW.createAvatarImage(certificateField.getX(), certificateField.getY(), certificateField.getWidth(), certificateField.getHeight());
-                    fieldContainer.getChildren().add(avatarImage);
+                    ImageView avatarImage = createAvatarImage(certificateField);
+                    addImage(avatarImage, certificateField);
                     setAvatarFieldAdded(true);
                 } else {
-                    CertificateText certificateText = WINDOW.createText(certificateField);
+                    CertificateText certificateText = createText(certificateField);
                     certificateText.setX(certificateField.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
                     fieldContainer.getChildren().add(certificateText);
                     if(disallowmultiplefields) {
                         if(certificateField.getFieldType() == FieldType.DATE) setDateFieldAdded(true);
                         if(certificateField.getFieldType() == FieldType.REGNO) setRegnoFieldAdded(true);
-                        if(certificateField.getFieldType() == FieldType.COURSE) setCourseFieldAdded(true);
-                        if(certificateField.getFieldType() == FieldType.COURSEDETAILS) setCourseDetailsFieldAdded(true);
                     }
                 }
             }
@@ -125,13 +121,9 @@ public final class CertificateTab extends Tab {
         return image.progressProperty();
     }
     
-    public boolean isCourseFieldAdded() {
-        return courseFieldAdded.get();
-    }
-
-    public void setCourseFieldAdded(boolean courseFieldAdded) {
-        this.courseFieldAdded.set(courseFieldAdded);
-    }
+    /*
+     * BOOLEANS
+     */
 
     public boolean isAvatarFieldAdded() {
         return avatarFieldAdded.get();
@@ -156,14 +148,6 @@ public final class CertificateTab extends Tab {
     public void setRegnoFieldAdded(boolean regnoFieldAdded) {
         this.regnoFieldAdded.set(regnoFieldAdded);
     }
-
-    public boolean isCourseDetailsFieldAdded() {
-        return courseDetailsFieldAdded.get();
-    }
-
-    public void setCourseDetailsFieldAdded(boolean courseDetailsFieldAdded) {
-        this.courseDetailsFieldAdded.set(courseDetailsFieldAdded);
-    }
     
     public boolean isChanged() {
         return changed.get();
@@ -173,18 +157,20 @@ public final class CertificateTab extends Tab {
         this.changed.set(changed);
     }
 
+    /*
+     * PROPERTIES
+     */
+    
     public BooleanProperty dateFieldProperty() {
         return dateFieldAdded;
     }
     public BooleanProperty regnoFieldProperty() {
-        return dateFieldAdded;
+        return regnoFieldAdded;
     }
-    public BooleanProperty courseFieldProperty() {
-        return dateFieldAdded;
-    }
-    public BooleanProperty courseDetailsFieldProperty() {
-        return dateFieldAdded;
-    }
+    
+    /*
+     * OTHER GETTERS AND SETTERS
+     */
     
     public File getFile() {
         return certificateFile;
@@ -206,10 +192,111 @@ public final class CertificateTab extends Tab {
         return fieldContainer;
     }
     
-    public void setWrapper(CertificateWrapper certificateWrapper) {
-        File imageFile = certificateWrapper.getCertificateImage();
-        final Image image = new Image(imageFile.toURI().toString(), true);
-        
+    /*****************
+     * EVENT HANDLERS
+     ****************/
+    
+    public EventHandler<MouseEvent> getAvatarMouseHandler() {
+        return new EventHandler<MouseEvent>() {
+            double initialEventX;
+            double initialEventY;
+            double initialComponentX;
+            double initialComponentY;
+            @Override
+            public void handle(MouseEvent event) {
+                System.out.println("clicked : x" + event.getX() + ", y" + event.getY());
+                EventType<? extends Event> eventType = event.getEventType();
+                ImageView imageView = (ImageView) event.getSource();
+                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                        initialComponentX = imageView.getX();
+                        initialComponentY = imageView.getY();
+                        initialEventX = event.getX();
+                        initialEventY = event.getY();
+//                        System.out.println("Mode : move"); // debug
+                    } else if (Window.getMouseMode() == Window.MODE_DELETE) {
+                        Group parent = (Group) imageView.getParent();
+                        parent.getChildren().remove(imageView);
+                        setAvatarFieldAdded(false);
+//                        System.out.println("Mode : delete"); // debug
+                    } else if(Window.getMouseMode() == Window.MODE_EDIT) {
+                        System.out.println("Editing image"); // debug
+                        WINDOW.showEditAvatarDialog(CertificateTab.this, imageView);
+                    }
+                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                    double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        imageView.setX(x);
+                        imageView.setY(y);
+                    }
+                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        imageView.setX(x);
+                        imageView.setY(y);
+                    }
+                }
+            }
+        };
+    }
+    
+    public EventHandler<MouseEvent> getTextMouseHandler() {
+         return new EventHandler<MouseEvent>() {
+            double initialEventX;
+            double initialEventY;
+            double initialComponentX;
+            double initialComponentY;
+            @Override
+            public void handle(MouseEvent event) {
+                EventType<? extends Event> eventType = event.getEventType();
+                CertificateText text = (CertificateText) event.getSource();
+                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                        initialComponentX = text.getX();
+                        initialComponentY = text.getY();
+                        initialEventX = event.getX();
+                        initialEventY = event.getY();
+//                        System.out.println("Mode : move"); // debug
+                    } else if (Window.getMouseMode() == Window.MODE_DELETE) {
+                        Group parent = (Group) text.getParent();
+                        parent.getChildren().remove(text);
+                        System.out.println("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
+                        FieldType type = text.fieldTypeProperty().get();
+                        if(type == FieldType.DATE) setDateFieldAdded(false);
+                        if(type == FieldType.REGNO) setRegnoFieldAdded(false);
+//                        System.out.println("Mode : delete"); // debug
+                    } else if (Window.getMouseMode() == Window.MODE_EDIT) {
+                        
+                        WINDOW.showEditFieldDialog(CertificateTab.this, text);
+//                        System.out.println("Mode : edit"); // debug
+                    }
+                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        text.setX(x);
+                        text.setY(y);
+                    }
+                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
+                    if(Window.getMouseMode() == Window.MODE_MOVE) {
+                        double currentX = event.getX();
+                        double currentY = event.getY();
+                        double x = currentX - initialEventX + initialComponentX;
+                        double y = currentY - initialEventY + initialComponentY;
+                        text.setX(x);
+                        text.setY(y);
+                    }
+                }
+            }
+        };
     }
     
     /**
@@ -234,9 +321,9 @@ public final class CertificateTab extends Tab {
                 if(type.equals(MouseEvent.MOUSE_PRESSED)) {
                     initialX = event.getX();
                     initialY = event.getY();
-                    if(getMouseMode() == Window.MouseMode.ADD) {
+                    if(getMouseMode() == Window.MODE_ADD) {
                         WINDOW.showNewFieldDialog(CertificateTab.this, new Point2D(event.getX(), event.getY()));
-                    } else if(getMouseMode() == Window.MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
+                    } else if(getMouseMode() == Window.MODE_ADDIMAGE) { // remove this if if you want selection lines on all modes
                         fieldContainer.getChildren().add(adjXline);
                         fieldContainer.getChildren().add(adjYline);
                         fieldContainer.getChildren().add(oppYline);
@@ -264,7 +351,7 @@ public final class CertificateTab extends Tab {
 //                    adjXline.setEndX(event.getX());
 //                    adjXline.setStartY(initialY);
 //                    adjXline.setEndY(event.getY());
-                    if(getMouseMode() == Window.MouseMode.ADD_IMAGE) { // remove this if if you want selection lines on all modes
+                    if(getMouseMode() == Window.MODE_ADDIMAGE) { // remove this if if you want selection lines on all modes
                         adjXline.setStartX(event.getX());
                         adjXline.setEndX(event.getX());
                         adjXline.setStartY(event.getY());
@@ -287,7 +374,7 @@ public final class CertificateTab extends Tab {
                     }
                     
                 } else if(type.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(getMouseMode() == Window.MouseMode.ADD_IMAGE) {
+                    if(getMouseMode() == Window.MODE_ADDIMAGE) {
                         if(!isAvatarFieldAdded()) {
                             if(initialX == event.getX() && initialY == event.getY()) {
                                 System.out.println("clicked, showing avatar dialog"); // debug
@@ -315,6 +402,61 @@ public final class CertificateTab extends Tab {
         };
     }
 
+    
+    public void addText(CertificateText text, CertificateField field) {
+        fieldContainer.getChildren().add(text);
+        wrapper.getCertificateFields().add(field);
+        System.out.println("new field added " + field.getFieldType() + ", total wrapper contents : " + wrapper.getCertificateFields().size());
+    }
+    
+    public void addImage(ImageView image, CertificateField field) {
+        fieldContainer.getChildren().add(image);
+        wrapper.getCertificateFields().add(field);
+        System.out.println("new field added " + field.getFieldType() + ", total wrapper contents : " + wrapper.getCertificateFields().size());
+    }
+    
+    /**
+     * used by outsiders
+     * converts and CertificateField into a Text object
+     * @param field
+     * @return 
+     */
+    public CertificateText createText(final CertificateField field) {
+        CertificateText text = new CertificateText(field);
+        // listeners
+        EventHandler<MouseEvent> mouseHandler = getTextMouseHandler();
+        text.setOnMousePressed(mouseHandler);
+        text.setOnMouseDragged(mouseHandler);
+        text.setOnMouseReleased(mouseHandler);
+        // bindings
+        field.observe(text);
+        return text;
+    }
+
+    public ImageView createAvatarImage(final CertificateField field) {
+        Image image = createImage(field.getWidth(), field.getHeight());
+//        System.out.println("image dimensions : " + width + "x" + height); // debug
+        ImageView imageView = new ImageView(image);
+        imageView.setX(field.getX());
+        imageView.setY(field.getY());
+//        System.out.println("image coords : x" + x + " y" + y); // debug
+        EventHandler<MouseEvent> mouseHandler = getAvatarMouseHandler();
+        imageView.setOnMousePressed(mouseHandler);
+        imageView.setOnMouseDragged(mouseHandler);
+        imageView.setOnMouseReleased(mouseHandler);
+        // bindings
+        field.observe(imageView);
+        return imageView;
+    }
+    
+    public Image createImage(int width, int height)  {
+        return new Image(getClass().getResourceAsStream("icons/avatarx1500.png"), width, height, false, true);
+    }
+    
+    /*
+     * STATIC GETTERS AND SETTERS
+     */
+    
     public static Stage getPRIMARY_STAGE() {
         return PRIMARY_STAGE;
     }

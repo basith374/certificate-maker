@@ -20,6 +20,15 @@ package org.bluecipherz.certificatemaker;
 import java.util.List;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
+import javafx.scene.Node;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.text.Font;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -35,17 +44,25 @@ public class CertificateField {
     private int y;
     private FieldType fieldType;
     private String fieldName;
-    private int fontSize;
+    private double fontSize;
     private String fontFamily;
-    private int fontStyle; // depending on java.awt.Font (eg. Font.BOLD, Font.PLAIN)
-    private List<String> courses;
-    private List<String> coursesDetails;
+    private String fontStyle; // depending on java.awt.Font (eg. Font.BOLD, Font.PLAIN)
+    private List<String> array;
     private int width;
     private int height;
     private boolean repeating;
 
     public boolean isRepeating() {
         return repeating;
+    }
+
+    @XmlElement(name = "array")
+    public List<String> getArray() {
+        return array;
+    }
+
+    public void setArray(List<String> array) {
+        this.array = array;
     }
 
     public void setRepeating(boolean repeating) {
@@ -104,26 +121,7 @@ public class CertificateField {
         this.fieldType = fieldType;
     }
     
-    @XmlElement(name = "course")
-    public List<String> getCourses() {
-        return courses;
-    }
-
-    public void setCourses(List<String> courses) {
-//        System.out.println("setCourses() called"); // debug
-        this.courses = courses;
-    }
-
-    @XmlElement(name = "coursedetails")
-    public List<String> getCoursesDetails() {
-        return coursesDetails;
-    }
-
-    public void setCoursesDetails(List<String> coursesDetails) {
-        this.coursesDetails = coursesDetails;
-    }
-    
-
+    @XmlAttribute
     public String getFieldName() {
         return fieldName;
     }
@@ -132,11 +130,11 @@ public class CertificateField {
         this.fieldName = fieldName;
     }
 
-    public int getFontSize() {
+    public double getFontSize() {
         return fontSize;
     }
 
-    public void setFontSize(int fontSize) {
+    public void setFontSize(double fontSize) {
         this.fontSize = fontSize;
     }
 
@@ -148,14 +146,77 @@ public class CertificateField {
         this.fontFamily = fontFamily;
     }
 
-    public int getFontStyle() {
+    public String getFontStyle() {
         return fontStyle;
     }
 
-    public void setFontStyle(int fontStyle) {
+    public void setFontStyle(String fontStyle) {
         this.fontStyle = fontStyle;
     }
-
+    
+    public void observe(final Node node) {
+        if(node instanceof CertificateText) {
+            CertificateText text = (CertificateText) node;
+            text.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
+                @Override
+                public void changed(ObservableValue<? extends Bounds> ov, Bounds oldBounds, Bounds newBounds) {
+                    int x = (int) (newBounds.getMinX() + newBounds.getMaxX() / 2);
+//                    int y = (int) (newBounds.getMinY() + newBounds.getMaxY() / 2);
+                    int y = (int) newBounds.getMinY();
+                    setX(x);
+                    setY(y);
+                }
+            });
+            text.textProperty().addListener(new ChangeListener<String>() {
+                @Override
+                public void changed(ObservableValue<? extends String> ov, String t, String newText) {
+                    setFieldName(newText);
+                }
+            });
+            if(fieldType == FieldType.ARRAY) {
+                text.arrayProperty().addListener(new ListChangeListener<String>() {
+                    @Override
+                    public void onChanged(ListChangeListener.Change<? extends String> change) {
+                        ObservableList<String> list = (ObservableList<String>) change.getList();
+                        setArray(list);
+                    }
+                });
+            }
+            if(fieldType == FieldType.TEXT) {
+                text.repeatingProperty().addListener(new ChangeListener<Boolean>() {
+                    @Override
+                    public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean repeating) {
+                        setRepeating(repeating);
+                    }
+                });
+            }
+            text.fontProperty().addListener(new ChangeListener<Font>() {
+                @Override
+                public void changed(ObservableValue<? extends Font> ov, Font t, Font newFont) {
+                    setFontFamily(newFont.getFamily());
+                    setFontSize(newFont.getSize());
+                    setFontStyle(newFont.getStyle());
+                }
+            });
+        } else if(node instanceof ImageView) {
+            ImageView imageView = (ImageView) node;
+            imageView.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
+                @Override
+                public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds newBounds) {
+                    setX((int) newBounds.getMinX());
+                    setY((int) newBounds.getMinY());
+                }
+            });
+            imageView.imageProperty().addListener(new ChangeListener<Image>() {
+                @Override
+                public void changed(ObservableValue<? extends Image> ov, Image t, Image newImage) {
+                    setWidth((int) newImage.getWidth());
+                    setHeight((int) newImage.getHeight());
+                }
+            });
+        }
+    }
+    
     @Override
     public String toString() {
 //        return super.toString();
@@ -164,20 +225,20 @@ public class CertificateField {
         if(fieldType != FieldType.IMAGE) {
             if(fieldType == FieldType.TEXT) output = output.concat(", fieldname=" + fieldName);
             output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily + ", fontstyle=" + fontStyle);
-            if(fieldType == FieldType.COURSE) {
-                output = output.concat(", courses : ");
-                if(courses != null) {
-                    if(!courses.isEmpty()) {
-                        for(String course : courses) {
-                            output = output.concat(course+",");
-                        }
-                    } else {
-                        System.out.println("Courses is empty"); // debug
-                    }
-                } else {
-                    System.out.println("Courses has become null."); // debug
-                }
-            }
+//            if(fieldType == FieldType.COURSE) {
+//                output = output.concat(", courses : ");
+//                if(courses != null) {
+//                    if(!courses.isEmpty()) {
+//                        for(String course : courses) {
+//                            output = output.concat(course+",");
+//                        }
+//                    } else {
+//                        System.out.println("Courses is empty"); // debug
+//                    }
+//                } else {
+//                    System.out.println("Courses has become null."); // debug
+//                }
+//            }
         }
         return output.concat("}\n");
     }

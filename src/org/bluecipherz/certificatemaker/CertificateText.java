@@ -17,6 +17,21 @@
  */
 package org.bluecipherz.certificatemaker;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Bounds;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
@@ -27,28 +42,44 @@ import javafx.scene.text.Text;
  */
 public final class CertificateText extends Text {
     
-    private CertificateField certificateField;
-
-    public CertificateField getCertificateField() {
-        return certificateField;
-    }
-
-    public void setCertificateField(CertificateField certificateField) {
-        this.certificateField = certificateField;
-        if(certificateField.getFieldType() == FieldType.TEXT) {
-            this.setText(certificateField.getFieldName());
-        } else {
-            this.setText(certificateField.getFieldType().toString());
+    private ReadOnlyObjectWrapper<FieldType> fieldType;
+    private ReadOnlyBooleanWrapper repeatin;
+    private ObservableList<String> array;
+    
+    public CertificateText(CertificateField field) {
+        this.setX(field.getX());
+        this.setY(field.getY());
+        FontWeight fw = FontWeight.findByName(field.getFontStyle());
+        this.setFont(Font.font(field.getFontFamily(), fw, field.getFontSize()));
+        
+        if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) setText(field.getFieldName());
+        else setText(field.getFieldType().toString());
 //            System.out.println("Text : " + certificateField.getFieldType().toString()); // debug
-        }
-        this.setX(certificateField.getX());
-        this.setY(certificateField.getY());
-        FontWeight fw = certificateField.getFontStyle() == java.awt.Font.BOLD ? FontWeight.BOLD : FontWeight.NORMAL; // a lil messy
-        this.setFont(Font.font(certificateField.getFontFamily(), fw, certificateField.getFontSize()));
+        
+        fieldType = new ReadOnlyObjectWrapper(field.getFieldType());
+        if(field.getFieldType() == FieldType.TEXT) repeatin = new ReadOnlyBooleanWrapper(field.isRepeating());
+        if(field.getFieldType() == FieldType.ARRAY) array = FXCollections.observableArrayList(field.getArray());
+    }
+    
+    public void setAttributes(CertificateField field) {
+        FontWeight fw = FontWeight.findByName(field.getFontStyle());
+        this.setFont(Font.font(field.getFontFamily(), fw, field.getFontSize()));
+        if(field.getFieldType() == FieldType.TEXT) { setText(field.getFieldName()); repeatin.set(field.isRepeating()); }
+        if(field.getFieldType() == FieldType.ARRAY) array.setAll(field.getArray());
     }
 
-    public CertificateText(CertificateField certificateField) {
-        setCertificateField(certificateField);
+    public ReadOnlyObjectProperty<FieldType> fieldTypeProperty() {
+        return fieldType.getReadOnlyProperty();
+    }
+    
+    public ReadOnlyBooleanProperty repeatingProperty() {
+        if(repeatin != null) return repeatin.getReadOnlyProperty();
+        else return null;
+    }
+    
+    public ObservableList<String> arrayProperty() {
+        if(array != null) return array;
+        else return null;
     }
     
 }

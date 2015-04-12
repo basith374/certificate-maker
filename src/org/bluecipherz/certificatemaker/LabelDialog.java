@@ -28,6 +28,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
@@ -43,6 +44,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.input.KeyCode;
@@ -64,9 +66,11 @@ class LabelDialog extends Stage {
     private final EventHandler<ActionEvent> editOkAction;
     private final EventHandler<ActionEvent> newOkAction;
     private final EventHandler<ActionEvent> categoryAction;
+    
     private CertificateText subjectText;
     private final TextField textField;
-    private CertificateTab textHolder;
+    private CertificateTab tab;
+    
     private static final String NEW_TEXT = "Enter a name for the newly added field:";
     private static final String EDIT_TEXT = "Edit the name of the selected field";
     private final Label asklabel;
@@ -78,29 +82,38 @@ class LabelDialog extends Stage {
     private final ComboBox fontStyleBox;
     private final Window window;
     
-    private static final ObservableList<String> categories = FXCollections.observableArrayList(
-//                "Text", "Date", "Regno", "Course",
-                FieldType.TEXT.getName(), // new enum implementation
-                FieldType.DATE.getName(), // new enum implementation
-                FieldType.REGNO.getName(), // new enum implementation
-                FieldType.COURSE.getName(), // new enum implementation
-                FieldType.COURSEDETAILS.getName() // new enum implementation
+    private static final ObservableList<FieldType> fieldTypes = FXCollections.observableArrayList(
+                FieldType.TEXT,
+                FieldType.DATE,
+                FieldType.REGNO,
+                FieldType.ARRAY
             );
     private GridPane gridPane;
     private ComboBox fieldTypeBox;
     
-    FieldType category;
+    FieldType prevCategory;
     private Label textLabel;
-    private ListView<String> list;
+    private ListView<String> listView;
     private Label coursesLabel;
     private Timeline animation;
-    private ListButton addButton;
-    private ListButton removeButton;
+    private Button addButton;
+    private Button removeButton;
     private CertificateUtils certificateUtils;
     
-    private EventHandler<ActionEvent> listViewEventHandler = new ListViewButtonHandler();
-    private final ListView desclist;
-    private Label coursesDetailsLabel;
+    private EventHandler<ActionEvent> listViewEventHandler = new EventHandler<ActionEvent>() {
+        @Override
+        public void handle(ActionEvent t) {
+            Button b = (Button) t.getSource();
+            if(b.equals(addButton)) {
+                listView.getItems().add("");
+                listView.getSelectionModel().selectLast();
+                animation.play();
+            } else if(b.equals(removeButton)) {
+                System.out.println("removing" + listView.getSelectionModel().getSelectedItem());
+                listView.getItems().remove(listView.getSelectionModel().getSelectedItem());
+            }
+        }
+    };
     private CheckBox repeatCheckBox;
     private Label repeatingLabel;
 
@@ -125,32 +138,17 @@ class LabelDialog extends Stage {
         editOkAction = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                FieldType previousType = subjectText.getCertificateField().getFieldType();
                 int x = (int) subjectText.getX();
                 int y = (int) subjectText.getY();
                 CertificateField field = generateCertificateField(x, y); // generate edited text
-                if(field.getFieldType() == FieldType.TEXT) {
+                if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) {
                     if(!"".equalsIgnoreCase(textField.getText())) {
-                        subjectText.setCertificateField(field);
+                        subjectText.setAttributes(field);
                         close();
                     } else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
                 } else {
-                    // disallow multiple fields(single type)
-                    if(previousType != field.getFieldType()) {
-                        if(previousType == FieldType.DATE) textHolder.setDateFieldAdded(false);
-                        if(previousType == FieldType.REGNO) textHolder.setRegnoFieldAdded(false);
-                        if(previousType == FieldType.COURSE) textHolder.setCourseFieldAdded(false);
-                        if(previousType == FieldType.COURSEDETAILS) textHolder.setCourseDetailsFieldAdded(false);
-                    }
-                    boolean editisvalid = true;
-                    if(field.getFieldType() == FieldType.DATE) if(textHolder.isDateFieldAdded() && previousType != FieldType.DATE) editisvalid = false;
-                    if(field.getFieldType() == FieldType.REGNO) if(textHolder.isRegnoFieldAdded() && previousType != FieldType.REGNO) editisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSE) if(textHolder.isCourseFieldAdded() && previousType != FieldType.COURSE) editisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSEDETAILS) if(textHolder.isCourseDetailsFieldAdded() && previousType != FieldType.COURSEDETAILS) editisvalid = false;
-                    if(editisvalid) {
-                        subjectText.setCertificateField(field);
-                        close();
-                    } else Alert.showAlertError(owner, "Error", field.getFieldType().toString() + " already added");
+                    subjectText.setAttributes(field);
+                    close();
                 }
             }
         };
@@ -158,30 +156,25 @@ class LabelDialog extends Stage {
             @Override
             public void handle(ActionEvent event) {
                 CertificateField field = generateCertificateField(newX, newY);
-                subjectText = window.createText(field); // generate new text
-                Group group = (Group) ((ScrollPane)textHolder.getContent()).getContent();
+                subjectText = tab.createText(field); // generate new text
                 
-                System.out.println("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
-                if(field.getFieldType() == FieldType.TEXT) {
+//                System.out.println("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
+                if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) {
                     if(!"".equalsIgnoreCase(subjectText.getText())) {
-                        group.getChildren().add(subjectText);
+                        tab.addText(subjectText, field);
                         close();
                     }
                     else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
                 } else {
                     boolean entryisvalid = true;
-                    if(field.getFieldType() == FieldType.DATE) if(textHolder.isDateFieldAdded()) entryisvalid = false;
-                    if(field.getFieldType() == FieldType.REGNO) if(textHolder.isRegnoFieldAdded()) entryisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSE) if(textHolder.isCourseFieldAdded()) entryisvalid = false;
-                    if(field.getFieldType() == FieldType.COURSEDETAILS) if(textHolder.isCourseDetailsFieldAdded()) entryisvalid = false;
+                    if(field.getFieldType() == FieldType.DATE) if(tab.isDateFieldAdded()) entryisvalid = false;
+                    if(field.getFieldType() == FieldType.REGNO) if(tab.isRegnoFieldAdded()) entryisvalid = false;
                     if(entryisvalid) {
-                        group.getChildren().add(subjectText);
+                        tab.addText(subjectText, field);
                         // disallow multiple fields(single type)
                         if(disallowmultiplefields) {
-                            if(field.getFieldType() == FieldType.DATE) textHolder.setDateFieldAdded(true);
-                            if(field.getFieldType() == FieldType.REGNO) textHolder.setRegnoFieldAdded(true);
-                            if(field.getFieldType() == FieldType.COURSE) textHolder.setCourseFieldAdded(true);
-                            if(field.getFieldType() == FieldType.COURSEDETAILS) textHolder.setCourseDetailsFieldAdded(true);
+                            if(field.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
+                            if(field.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
                         }
                         close();
                     }
@@ -206,17 +199,14 @@ class LabelDialog extends Stage {
                         break;
                     case DATE:
                         addMinimalItems();
-                        category = FieldType.DATE; // the above method wont do this
+                        prevCategory = FieldType.DATE; // the above method wont do this
                         break;
                     case REGNO:
                         addMinimalItems();
-                        category = FieldType.REGNO; // the above method wont do this
+                        prevCategory = FieldType.REGNO; // the above method wont do this
                         break;
-                    case COURSE:
-                        addCourseItems();
-                        break;
-                    case COURSEDETAILS:
-                        addCourseDetailsItems();
+                    case ARRAY:
+                        addArrayItems();
                         break;
                     default:
                 }
@@ -240,129 +230,105 @@ class LabelDialog extends Stage {
         gridPane.setVgap(5);
         
         asklabel = new Label();
-        gridPane.add(asklabel, 0, 0, 2, 1);
         
-        Label categoryLabel = new Label("Category");
-        gridPane.add(categoryLabel, 0, 1);
+        Label fieldTypeLabel = new Label("Category");
         textLabel = new Label("Text : ");
-        coursesLabel = new Label("Courses : ");
-        coursesDetailsLabel = new Label("Course details : ");
-        list = createNewListView();
-        desclist = createNewListView();
-        addButton = new ListButton("Add");
+        coursesLabel = new Label("Values : ");
+        listView = createNewListView();
+        addButton = new Button("Add");
         addButton.setOnAction(listViewEventHandler);
-        GridPane.setValignment(addButton, VPos.BASELINE);
-        removeButton = new ListButton("Remove");
-        addButton.setOnAction(listViewEventHandler);
-        gridPane.add(textLabel, 0, 2, 1, 2); // col, row, colspan, rowspan
-        Label textLabel1 = new Label("Font name : ");
-        gridPane.add(textLabel1, 0, 4);
-        Label textLabel2 = new Label("Font size : ");
-        gridPane.add(textLabel2, 0, 5);
-        Label textLabel3 = new Label("Font style : ");
-        gridPane.add(textLabel3, 0, 6);
+        GridPane.setValignment(addButton, VPos.BOTTOM);
+        removeButton = new Button("Remove");
+        removeButton.setOnAction(listViewEventHandler);
         
-        fieldTypeBox = new ComboBox(categories);
+        animation = new Timeline(new KeyFrame(Duration.seconds(.1), new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                listView.edit(listView.getSelectionModel().getSelectedIndex());
+            }
+        }));
+        animation.setCycleCount(1);
+        
+        Label fontFamilyLabel = new Label("Font family : ");
+        Label fontSizeLabel = new Label("Font size : ");
+        Label fontStyleLabel = new Label("Font style : ");
+        
+        fieldTypeBox = new ComboBox(fieldTypes);
         fieldTypeBox.getSelectionModel().select(0); // select first
-        category = FieldType.TEXT;
+        prevCategory = FieldType.TEXT;
         fieldTypeBox.setOnAction(categoryAction);
-        gridPane.add(fieldTypeBox, 1, 1);
         textField = new TextField();
-        gridPane.add(textField, 1, 2, 1, 2); // col, row, colspan, rowspan
         repeatingLabel = new Label("Repeating");
-        gridPane.add(repeatingLabel, 2, 2);
         repeatCheckBox = new CheckBox();
-        gridPane.add(repeatCheckBox, 3, 2);
-        fontFamilyBox = new ComboBox(window.getFontFamilyList()); // dependency
-        gridPane.add(fontFamilyBox, 1, 4);
+        fontFamilyBox = new ComboBox(window.getFontFamilyList());
         fontFamilyBox.getSelectionModel().select(0);
-        fontSizeBox = new ComboBox(window.getFontSizeList()); // dependency
-        gridPane.add(fontSizeBox, 1, 5);
+        fontSizeBox = new ComboBox(window.getFontSizeList());
         fontSizeBox.getSelectionModel().select(5);
-        fontStyleBox = new ComboBox(window.getFontStyleList()); // dependency
-        gridPane.add(fontStyleBox, 1, 6);
+        fontStyleBox = new ComboBox(window.getFontStyleList());
         fontStyleBox.getSelectionModel().select(0);
         
-        list.getItems().addListener(new ListChangeListener<String>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                System.out.println("course box changed : " + list.getItems().size());
-            }
-        });
-        desclist.getItems().addListener(new ListChangeListener() {
-            @Override
-            public void onChanged(ListChangeListener.Change change) {
-                System.out.println("course details changed : " + desclist.getItems().size());
-            }
-        });
+        // params : col, row, colspan, rowspan
+        gridPane.add(asklabel, 0, 0, 2, 1); // 1 row
+        gridPane.add(fieldTypeLabel, 0, 1); // 2 row
+        gridPane.add(fieldTypeBox, 1, 1); // 2 row
+        gridPane.add(new Separator(Orientation.HORIZONTAL), 0, 2, 4, 1); // 3 row
+        gridPane.add(textLabel, 0, 3, 1, 3); // 4 row
+        gridPane.add(textField, 1, 3, 1, 3); // 4 row
+        gridPane.add(repeatingLabel, 2, 3, 1, 3); // 4 row
+        gridPane.add(repeatCheckBox, 3, 3, 1, 3); // 4 row
+        gridPane.add(fontFamilyLabel, 0, 6); // 5 row
+        gridPane.add(fontFamilyBox, 1, 6); // 5 row
+        gridPane.add(fontSizeLabel, 0, 7); // 6 row
+        gridPane.add(fontSizeBox, 1, 7); // 6 row
+        gridPane.add(fontStyleLabel, 0, 8); // 7 row
+        gridPane.add(fontStyleBox, 1, 8); // 7 row
         
         button = new Button("OK");
         GridPane.setHalignment(button, HPos.RIGHT);
-        gridPane.add(button, 1, 7);
+        gridPane.add(button, 3, 9);
         
         root.getChildren().add(gridPane);
     }
     
     
     private void addMinimalItems() {
-        if(category == FieldType.TEXT) removeTextItems();
-        if(category == FieldType.COURSE) removeCourseItems();
-        if(category == FieldType.COURSEDETAILS) removeCourseDetailsItems();
+        if(prevCategory == FieldType.TEXT) removeTextItems();
+        if(prevCategory == FieldType.ARRAY) removeArrayItems();
     }
     
-    private void addCourseItems() {
-        if(category == FieldType.TEXT) removeTextItems();
-        if(category == FieldType.COURSEDETAILS) removeCourseDetailsItems();
-        if(category != FieldType.COURSE) {
-            gridPane.add(coursesLabel, 0, 2, 1, 2); // col, row, colspan, rowspan
-            gridPane.add(list, 1, 2, 1, 2); // col, row, colspan, rowspan
-            gridPane.add(addButton, 2, 2);
-            gridPane.add(removeButton, 2, 3);
-            addButton.setTargetListView(list);
-            removeButton.setTargetListView(list);
+    private void addArrayItems() {
+        if(prevCategory == FieldType.TEXT) removeTextItems();
+        if(prevCategory != FieldType.ARRAY) {
+            gridPane.add(textLabel, 0, 3, 1, 1); // col, row, colspan, rowspan
+            gridPane.add(textField, 1, 3, 1, 1); // col, row, colspan, rowspan
+            gridPane.add(coursesLabel, 0, 4, 1, 2); // col, row, colspan, rowspan
+            gridPane.add(listView, 1, 4, 1, 2); // col, row, colspan, rowspan
+            gridPane.add(addButton, 2, 4);
+            gridPane.add(removeButton, 2, 5);
         }
-        category = FieldType.COURSE;
-    }
-    
-    private void addCourseDetailsItems() {
-        if(category == FieldType.TEXT) removeTextItems();
-        if(category == FieldType.COURSE) removeCourseItems();
-        if(category != FieldType.COURSEDETAILS) {
-            gridPane.add(coursesDetailsLabel, 0, 2, 1, 2);
-            gridPane.add(desclist, 1, 2, 1, 2);
-            gridPane.add(addButton, 2, 2);
-            gridPane.add(removeButton, 2, 3);
-            addButton.setTargetListView(desclist);
-            removeButton.setTargetListView(desclist);
-        }
-        category = FieldType.COURSEDETAILS;
+        prevCategory = FieldType.ARRAY;
     }
     
     private void addTextItems() {
-        if(category == FieldType.COURSE) removeCourseItems();
-        if(category == FieldType.COURSEDETAILS) removeCourseDetailsItems();
-        if(category != FieldType.TEXT) {
-            gridPane.add(textLabel, 0, 2, 1, 2); // col, row, colspan, rowspan
-            gridPane.add(textField, 1, 2, 1, 2); // col, row, colspan, rowspan
-            gridPane.add(repeatingLabel, 2, 2);
-            gridPane.add(repeatCheckBox, 3, 2);
+        if(prevCategory == FieldType.ARRAY) removeArrayItems();
+        if(prevCategory != FieldType.TEXT) {
+            gridPane.add(textLabel, 0, 3, 1, 3); // col, row, colspan, rowspan
+            gridPane.add(textField, 1, 3, 1, 3); // col, row, colspan, rowspan
+            gridPane.add(repeatingLabel, 2, 3, 1, 3);
+            gridPane.add(repeatCheckBox, 3, 3, 1, 3);
         }
-        category = FieldType.TEXT;
+        prevCategory = FieldType.TEXT;
     }
     
-    private void removeCourseItems() {
+    private void removeArrayItems() {
         gridPane.getChildren().remove(coursesLabel);
-        gridPane.getChildren().remove(list);
+        gridPane.getChildren().remove(listView);
         gridPane.getChildren().remove(addButton);
         gridPane.getChildren().remove(removeButton);
+        gridPane.getChildren().remove(textLabel);
+        gridPane.getChildren().remove(textField);
     }
     
-    private void removeCourseDetailsItems() {
-        gridPane.getChildren().remove(coursesDetailsLabel);
-        gridPane.getChildren().remove(desclist);
-        gridPane.getChildren().remove(addButton);
-        gridPane.getChildren().remove(removeButton);
-    }
     
     private void removeTextItems() {
         gridPane.getChildren().remove(textLabel);
@@ -389,8 +355,7 @@ class LabelDialog extends Stage {
         // get font data
         String fontFamily = fontFamilyBox.getSelectionModel().getSelectedItem().toString();
         int fontSize = Integer.valueOf(fontSizeBox.getSelectionModel().getSelectedItem().toString());
-        String fontStyleString = fontStyleBox.getSelectionModel().getSelectedItem().toString();
-        int fontStyle = "Bold".equalsIgnoreCase(fontStyleString)?java.awt.Font.BOLD:java.awt.Font.PLAIN; // convert to awt
+        String fontStyle = fontStyleBox.getSelectionModel().getSelectedItem().toString();
         // set font data
         certificateField.setFontFamily(fontFamily);
         certificateField.setFontSize(fontSize);
@@ -401,69 +366,52 @@ class LabelDialog extends Stage {
             certificateField.setFieldName(textField.getText());
             certificateField.setRepeating(repeatCheckBox.isSelected());
         }
-        if(field_type == FieldType.COURSE) certificateField.setCourses(list.getItems());
-        if(field_type == FieldType.COURSEDETAILS) certificateField.setCoursesDetails(desclist.getItems());
-        
+        if(field_type == FieldType.ARRAY) {
+            certificateField.setFieldName(textField.getText());
+            certificateField.setArray(listView.getItems());
+        }
         return certificateField;
     }
 
     public void prepareAndShowNewTextDialog(CertificateTab tab, Point2D point) {
-        textHolder = tab;
-//        getScene().setCursor(Cursor.DEFAULT);
-//        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
-//        loadAlreadyAvailableContents(tab); // courses not loading bug fix
+        this.tab = tab;
+        
         setTitle("New entry");
         asklabel.setText(NEW_TEXT);
         newX = (int) point.getX();
         newY = (int) point.getY();
         textField.setText("");
         setDefaultFieldValues();
+        fieldTypeBox.setDisable(false);
         button.setOnAction(newOkAction);
         sizeToScene();
         show();
     }
 
     public void prepareAndShowEditTextDialog(CertificateTab tab, CertificateText text) {
-        textHolder = tab;
-//        loadAlreadyAvailableContents(tab); // courses not loading bug fix
-//        getScene().setCursor(Cursor.DEFAULT);
-//        getScene().addEventHandler(KeyEvent.KEY_PRESSED, escaction);
-        setTitle("Edit entry");
+        this.tab = tab;
+        
+        setTitle("Edit field");
         asklabel.setText(EDIT_TEXT);
         subjectText = text;
-        if(subjectText.getCertificateField() == null) {
-            System.out.println("WARNING : certificateField null");
-        }
-        System.out.println("Editing : " + subjectText.getCertificateField().getFieldType().toString()); // debug
-        int index = subjectText.getCertificateField().getFieldType().ordinal();
-        fieldTypeBox.getSelectionModel().select(index);
-//        fieldTypeBox.fireEvent(new ActionEvent(fieldTypeBox.getItems().get(index), fieldTypeBox));
+        FieldType TYPE = subjectText.fieldTypeProperty().get();
         
+        fieldTypeBox.getSelectionModel().select(TYPE);
         
-//        System.out.println("Editing :\nfield font: " + subjectText.getCertificateField().getFontFamily() + "," +  subjectText.getCertificateField().getFontSize() + "," + subjectText.getCertificateField().getFontStyle()
-//                + "\nsubject font: " + subjectText.getFont().getFamily() + "," + subjectText.getFont().getSize() + "," + subjectText.getFont().getStyle()); // debug
-        int familyindex = fontFamilyBox.getItems().indexOf(subjectText.getCertificateField().getFontFamily());
-//        System.out.println("family index : " + familyindex); // debug
-//        if(fontFamilyBox.getItems().contains(subjectText.getCertificateField().getFontFamily())) System.out.println("contains"); // debug
-//        int familyindex = fontFamilyBox.getItems().indexOf(subjectText.getCertificateField().getFontFamily());
-        int sizeindex = fontSizeBox.getItems().indexOf(subjectText.getCertificateField().getFontSize());
-//        int styleindex = fontStyleBox.getItems().indexOf(subjectText.getCertificateField().getFontStyle()); // no need, use directly
-        fontFamilyBox.getSelectionModel().select(familyindex); // new 
-        fontSizeBox.getSelectionModel().select(sizeindex);
-        fontStyleBox.getSelectionModel().select(subjectText.getCertificateField().getFontStyle());
-//        fontFamilyBox.getSelectionModel().select(subjectText.getFont().getFamily()); // new
-//        fontSizeBox.getSelectionModel().select(subjectText.getFont().getSize());
-//        fontFamilyBox.getSelectionModel().select(subjectText.getFont().getStyle());
+        fontFamilyBox.getSelectionModel().select(subjectText.getFont().getFamily()); // new 
+        System.out.println("" + (int) subjectText.getFont().getSize()); // debug
+        fontSizeBox.getSelectionModel().select((int)subjectText.getFont().getSize()); // avoid decimal, cast to int
+        fontStyleBox.getSelectionModel().select(subjectText.getFont().getStyle());
         
-        if(subjectText.getCertificateField().getFieldType() == FieldType.TEXT) {
+        if(TYPE == FieldType.TEXT) {
             textField.setText(subjectText.getText());
-            repeatCheckBox.setSelected(subjectText.getCertificateField().isRepeating());
-        } else if(subjectText.getCertificateField().getFieldType() == FieldType.COURSE) {
-            if(list.getItems().isEmpty()) list.getItems().addAll(subjectText.getCertificateField().getCourses());
-        } else if(subjectText.getCertificateField().getFieldType() == FieldType.COURSEDETAILS) {
-            if(desclist.getItems().isEmpty()) desclist.getItems().addAll(subjectText.getCertificateField().getCoursesDetails());
+            repeatCheckBox.setSelected(subjectText.repeatingProperty().get());
+        } else if(TYPE == FieldType.ARRAY) {
+            textField.setText(subjectText.getText());
+            listView.getItems().setAll(subjectText.arrayProperty());
         }
-//        setDefaultFieldValues();
+        
+        fieldTypeBox.setDisable(true);
         button.setOnAction(editOkAction);
         sizeToScene();
         show();
@@ -478,46 +426,11 @@ class LabelDialog extends Stage {
         });
         repeatCheckBox.setSelected(false); // dont know if this is necessary. just to make sure
         String fontFamily = UserDataManager.getDefaultFontFamily();
-        if (fontFamily != null) {
-            fontFamilyBox.getSelectionModel().select(window.getFontFamilyList().indexOf(fontFamily));
-        }
+        if (fontFamily != null) fontFamilyBox.getSelectionModel().select(window.getFontFamilyList().indexOf(fontFamily));
         String fontSize = UserDataManager.getDefaultFontSize();
-        if (fontSize != null) {
-            fontSizeBox.getSelectionModel().select(window.getFontSizeList().indexOf(Integer.valueOf(fontSize)));
-        }
+        if (fontSize != null) fontSizeBox.getSelectionModel().select(window.getFontSizeList().indexOf(Integer.valueOf(fontSize)));
         String fontStyle = UserDataManager.getDefaultFontStyle();
-        if (fontStyle != null) {
-            fontStyleBox.getSelectionModel().select(window.getFontStyleList().indexOf(fontStyle));
-        }
-        
-    }
-
-    
-    private ContextMenu getListContextMenu() {
-        ContextMenu menu = new ContextMenu();
-        
-        MenuItem addMenu = new MenuItem("Add");
-        menu.getItems().add(addMenu);
-        
-        MenuItem removeMenu = new MenuItem("Remove");
-        menu.getItems().add(removeMenu);
-        
-        addMenu.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                list.getItems().add("");
-                list.getSelectionModel().selectLast();
-                animation.play();
-            }
-        });
-        removeMenu.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                list.getItems().remove(list.getSelectionModel().getSelectedItem());
-            }
-        });
-        
-        return menu;
+        if (fontStyle != null) fontStyleBox.getSelectionModel().select(window.getFontStyleList().indexOf(fontStyle));
     }
 
     private ListView createNewListView() {
@@ -528,65 +441,5 @@ class LabelDialog extends Stage {
         list.setPrefHeight(150);
         return list;
     }
-
-    private void loadAlreadyAvailableContents(CertificateTab tab) {
-//        System.out.println("Before clear items : textholder contents " + textHolder.getCertificateWrapper().getCertificateFields().size()); // debug
-        if(!textHolder.equals(tab)) {
-            System.out.println("tab changed, clearing items...");
-            list.getItems().clear();
-            desclist.getItems().clear();
-        }
-        for(CertificateField field : tab.getWrapper().getCertificateFields()) {
-            if(field.getFieldType() == FieldType.COURSE) {
-                System.out.println("changing courses");
-                if(!field.getCourses().isEmpty()) list.setItems(FXCollections.observableArrayList(field.getCourses()));
-            } else if(field.getFieldType() == FieldType.COURSEDETAILS) {
-                System.out.println("changing course details");
-                if(!field.getCoursesDetails().isEmpty()) desclist.setItems(FXCollections.observableArrayList(field.getCoursesDetails()));
-            }
-        }
-    }
-    
-    class ListViewButtonHandler implements EventHandler<ActionEvent> {
-        ListView targetListView;
-        @Override
-        public void handle(ActionEvent t) {
-            ListButton source = (ListButton) t.getSource();
-            targetListView = source.getTargetListView();
-            if(addButton.equals(source)) {
-                if(targetListView.getEditingIndex() > -1) {
-                }
-                targetListView.getItems().add("");
-                targetListView.getSelectionModel().selectLast();
-                animation = new Timeline(new KeyFrame(Duration.seconds(.1), new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent t) {
-                        targetListView.edit(targetListView.getSelectionModel().getSelectedIndex());
-                    }
-                }));
-                animation.setCycleCount(1);
-                animation.play();
-            } else if(removeButton.equals(source)) {
-                targetListView.getItems().remove(targetListView.getSelectionModel().getSelectedItem());
-            }
-        }
         
-    }
-    
-    class ListButton extends Button {
-        private ListView targetListView;
-
-        private ListButton(String label) {
-            super(label);
-        }
-
-        public ListView getTargetListView() {
-            return targetListView;
-        }
-
-        public void setTargetListView(ListView targetListView) {
-            this.targetListView = targetListView;
-        }
-        
-    }
 }

@@ -91,6 +91,7 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.StageStyle;
+import javax.xml.bind.UnmarshalException;
 
 /**
  * This class is the main thing with over 1k LOC. technically speaking. however i think there are more comments than
@@ -105,10 +106,13 @@ public class Window  {
 
     private static Stage PRIMARY_STAGE;
     
+    /*
+     * ALLOW ONLY ONE INSTANCE OF DIALOG BOXES, HENCE STATIC
+     */
     private static NewTemplateDialog NEWTEMPLATE_DIALOG;
     private static LabelDialog LABEL_DIALOG;
     private static CreateCertificateDialog CREATECERTIFICATE_DIALOG;
-    private static AvatarDialog IMAGESIZE_DIALOG;
+    private static AvatarDialog AVATAR_DIALOG;
     private static About ABOUT_DIALOG;
     private static LoadingBox LOADINGBOX;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
@@ -130,33 +134,33 @@ public class Window  {
     private Label messageLabel;
 //    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
 
-    private TextField getTextField(FileChooser fileChooser) {
-        LinkedList<Object> queue = new LinkedList<>();
-        queue.add(fileChooser);
-        TextField tf = new TextField();
-        // no idea
-        return null;
-    }
-    
-
     private enum DIALOG_TYPE {
         OPEN,
         SAVE
     }
 
-    enum MouseMode {
+    /*
+     * MOUSE MODES
+     */
+    public static final int MODE_ADD = 0;
+    public static final int MODE_ADDIMAGE = 1;
+    public static final int MODE_MOVE = 2;
+    public static final int MODE_DELETE = 3;
+    public static final int MODE_EDIT = 4;
+    
+    private enum MouseMode {
         ADD, ADD_IMAGE, MOVE, DELETE, EDIT
     }
     
-    public static MouseMode getMouseMode() {
+    public static int getMouseMode() {
         return MOUSEMODE;
     }
 
-    public static void setMouseMode(MouseMode mode) {
+    public static void setMouseMode(int mode) {
         MOUSEMODE = mode;
     }
 
-    private static MouseMode MOUSEMODE;
+    private static int MOUSEMODE;
 
 //    
 //    @Override
@@ -172,7 +176,7 @@ public class Window  {
         LOADINGBOX = new LoadingBox(PRIMARY_STAGE);
         
         PRIMARY_STAGE.getIcons().add(ResourceManger.getInstance().iconx48);
-        setMouseMode(MouseMode.MOVE);
+        setMouseMode(MODE_MOVE);
         PRIMARY_STAGE.setTitle("Certificate Maker BCZ.");
         Group root = new Group();
         Scene scene = new Scene(root, DEFAULT_WIDTH, DEFAULT_HEIGHT, Color.WHITE);
@@ -242,24 +246,24 @@ public class Window  {
             public void handle(ActionEvent event) {
                 ToggleButton button = (ToggleButton) event.getSource();
                 if (button1.equals(button)) { // MOVE
-                    MOUSEMODE = MouseMode.MOVE;
+                    MOUSEMODE = MODE_MOVE;
                     setCursorIconForAllTextAtAllTab(Cursor.MOVE); // revert
                     resetCursorIconForAllTab();
                 } else if(button2.equals(button)) { // ADD IMAGE
-                    MOUSEMODE = MouseMode.ADD_IMAGE;
+                    MOUSEMODE = MODE_ADDIMAGE;
                     setCursorIconForAllTab(Cursor.CROSSHAIR);
                     setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR);
                 } else if(button3.equals(button)) { // ADD TEXT
-                    MOUSEMODE = MouseMode.ADD;
+                    MOUSEMODE = MODE_ADD;
                     setCursorIconForAllTab(Cursor.CROSSHAIR);
                     setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR); // TODO remove moving capability while MODE = ADD
                 } else if(button4.equals(button)) { // DELETE
-                    MOUSEMODE = MouseMode.DELETE;
+                    MOUSEMODE = MODE_DELETE;
                     // TODO IMPORTANT set entry deletion mouse cursor
 //                    setCursorIconForAllTextAtAllTab(Cursor.cursor(""));  // revert
                     resetCursorIconForAllTab();
                 } else if(button5.equals(button)) { // EDIT
-                    MOUSEMODE = MouseMode.EDIT;
+                    MOUSEMODE = MODE_EDIT;
                     setCursorIconForAllTextAtAllTab(Cursor.TEXT);
                     resetCursorIconForAllTab();
                 }
@@ -323,6 +327,7 @@ public class Window  {
         MenuItem newMenu = new MenuItem("New Template");
         MenuItem newCertificateMenu = new MenuItem("New Certificate");
         MenuItem openMenu = new MenuItem("Open Template");
+        final Menu openRecentMenu = new Menu("Open Recent");
         MenuItem saveMenu = new MenuItem("Save Template");
         MenuItem saveAsMenu = new MenuItem("Save As Template");
         MenuItem exitMenu = new MenuItem("Exit");
@@ -331,6 +336,7 @@ public class Window  {
         newMenu.setMnemonicParsing(true);
         newCertificateMenu.setMnemonicParsing(true);
         openMenu.setMnemonicParsing(true);
+        openRecentMenu.setMnemonicParsing(true);
         saveMenu.setMnemonicParsing(true);
         saveAsMenu.setMnemonicParsing(true);
         exitMenu.setMnemonicParsing(true);
@@ -339,6 +345,7 @@ public class Window  {
         fileMenu.getItems().add(new SeparatorMenuItem());
         fileMenu.getItems().add(newMenu);
         fileMenu.getItems().add(openMenu);
+        fileMenu.getItems().add(openRecentMenu);
         fileMenu.getItems().add(saveMenu);
         fileMenu.getItems().add(saveAsMenu);
         fileMenu.getItems().add(exitMenu);
@@ -354,7 +361,8 @@ public class Window  {
         // icons
         newMenu.setGraphic(new ImageView(ResourceManger.getInstance().newtempx16));
         newCertificateMenu.setGraphic(new ImageView(ResourceManger.getInstance().newx16));
-        openMenu.setGraphic(new ImageView(ResourceManger.getInstance().opentempx16));
+        openMenu.setGraphic(new ImageView(ResourceManger.getInstance().openex16));
+        openRecentMenu.setGraphic(new ImageView(ResourceManger.getInstance().opentempx16));
         saveMenu.setGraphic(new ImageView(ResourceManger.getInstance().savex16));
         saveAsMenu.setGraphic(new ImageView(ResourceManger.getInstance().saveasx16));
         exitMenu.setGraphic(new ImageView(ResourceManger.getInstance().exitx16));
@@ -365,6 +373,52 @@ public class Window  {
         saveMenu.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN));
         saveAsMenu.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCodeCombination.SHIFT_DOWN));
         exitMenu.setAccelerator(new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        
+        EventHandler<ActionEvent> recentHandler = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                MenuItem source = (MenuItem) t.getSource();
+                File file = new File(source.getText());
+                System.out.println(file.getAbsolutePath()); // debug
+                if(file.exists()) {
+                    int index = getTabIndex(file);
+                    if(index == -1) {
+                        openTemplateInGui(file);
+                        tabPane.getSelectionModel().select(index);
+                    } else {
+                        tabPane.getSelectionModel().select(index);
+                    }
+                } else {
+                    System.out.println("file doesnt exists. removing entry...");
+                    openRecentMenu.getItems().remove(source);
+                }
+            }
+        };
+        List<String> recent = UserDataManager.getRecentTemplates();
+        if(recent != null) {
+            System.out.println("Loading recent templates"); // debug
+            for(String path : recent) {
+                MenuItem recentMenu = new MenuItem(path);
+                recentMenu.setOnAction(recentHandler);
+                openRecentMenu.getItems().add(recentMenu);
+            }
+        } else {
+            System.out.println("No recent templates"); // debug
+            MenuItem empty = new MenuItem("No recent files");
+            empty.setDisable(true);
+            openRecentMenu.getItems().add(empty);
+        }
+        openRecentMenu.getItems().addListener(new ListChangeListener<MenuItem>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends MenuItem> change) {
+                ObservableList<? extends MenuItem> menuItems = change.getList();
+                List<String> list = new ArrayList<>();
+                for(MenuItem item : menuItems) {
+                    list.add(item.getText());    
+                }
+                UserDataManager.setRecentTemplates(list);
+            }
+        });
         
         menuBar.getMenus().add(fileMenu);
 
@@ -523,7 +577,7 @@ public class Window  {
 
 
         Label recentTemplatesLbl = new Label("Recent templates :");
-        toolBar.getItems().add(recentTemplatesLbl);
+//        toolBar.getItems().add(recentTemplatesLbl);
         
         List<String> recent = UserDataManager.getRecentTemplates();
 //        ObservableList<String> recentFiles = FXCollections.observableArrayList(UserDataManager.getRecentTemplates()); // null pointer
@@ -564,7 +618,7 @@ public class Window  {
             }
         });
         if(!recentTemplatesBox.getItems().contains("")) recentTemplatesBox.getItems().add(0, "");
-        toolBar.getItems().add(recentTemplatesBox);
+//        toolBar.getItems().add(recentTemplatesBox);
 
         Button newCertificateBtn = new Button("New Certificate", new ImageView(ResourceManger.getInstance().newx16));
         toolBar.getItems().add(newCertificateBtn);
@@ -621,11 +675,7 @@ public class Window  {
             @Override
             public void run() {
                 Integer fontSize = Integer.parseInt(UserDataManager.getDefaultFontSize());
-                if(fontSize != null) {
-                    fontSizes.getSelectionModel().select(fontSize);
-                } else {
-                    fontSizes.getSelectionModel().select(5);
-                }
+                fontSizes.getSelectionModel().select(fontSize);
             }
         });
         fontSizes.setOnAction(new EventHandler<ActionEvent>() {
@@ -637,7 +687,7 @@ public class Window  {
         });
 
         fontStyleList = FXCollections.observableArrayList(
-                "Plain", "Bold"
+                "Regular", "Bold"
         );
         final ComboBox<String> fontStyles = new ComboBox<>(fontStyleList);
         // reduce load on gui
@@ -735,8 +785,7 @@ public class Window  {
     
     /*** cursor related methods ***/
     private void setCursorIconForAllTextAtTab(Tab tab, Cursor imageCursor) {
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
+        Group group = ((CertificateTab)tab).getFieldContainer();
         for (Node node : group.getChildren()) {
             if (node instanceof CertificateText) {
                 node.setCursor(imageCursor);
@@ -745,8 +794,7 @@ public class Window  {
     }
 
     private void setCursorIconForTab(Tab tab, Cursor cursor) {
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
+        Group group = ((CertificateTab)tab).getFieldContainer();
         group.setCursor(Cursor.CROSSHAIR);
     }
 
@@ -763,8 +811,7 @@ public class Window  {
     }
 
     private void resetCursorIconForAllTextAtTab(Tab tab) {
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
+        Group group = ((CertificateTab)tab).getFieldContainer();
         for (Node node : group.getChildren()) {
             if (node instanceof CertificateText) {
                 node.setCursor(Cursor.DEFAULT);
@@ -773,8 +820,7 @@ public class Window  {
     }
 
     private void resetCursorIconForTab(Tab tab) {
-        ScrollPane scrollPane = (ScrollPane) tab.getContent();
-        Group group = (Group) scrollPane.getContent();
+        Group group = ((CertificateTab)tab).getFieldContainer();
         group.setCursor(Cursor.DEFAULT);
     }
 
@@ -817,7 +863,7 @@ public class Window  {
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1) {// do the rest
             if (tab.getFile() == null) {
-                File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template", tab.getText());
+                File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template");
                 certificateUtils.saveFileAtTab(tab, file);
                 tab.setFile(file); // TODO change filepath to tabs
                 if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
@@ -839,7 +885,7 @@ public class Window  {
         CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1){
-            File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.SAVE, "Save template", null);
+            File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.SAVE, "Save template");
             certificateUtils.saveFileAtTab(tab, file);
         } else {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "Nothing to save");
@@ -852,7 +898,7 @@ public class Window  {
      * @param stage
      */
     private void openTemplateByDialog(Stage stage) {
-        File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "Open certificate template", null);
+        File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "Open certificate template");
         if (file != null) {
             openTemplateInGui(file);
         } else {
@@ -867,21 +913,13 @@ public class Window  {
      * @param title
      * @return
      */
-    private File getFileByDialog(Stage stage, DIALOG_TYPE dialog_type, String title, String name) {
+    private File getFileByDialog(Stage stage, DIALOG_TYPE dialog_type, String title) {
         FileChooser fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extensionFilter = new FileChooser.ExtensionFilter("XML Files (*.xml)", "*.xml");
         fileChooser.getExtensionFilters().add(extensionFilter);
         fileChooser.setTitle(title);
         File lastActivityPath = UserDataManager.getLastActivityPath();
         if(lastActivityPath != null) fileChooser.setInitialDirectory(lastActivityPath);
-        // String name related
-        if(name != null) {
-            TextField field = getTextField(fileChooser);
-            if(field != null) { // just for safety
-                field.setText(name);
-            }
-        }
-        // end
         File file = null;
         if(dialog_type == DIALOG_TYPE.OPEN) {
             file = fileChooser.showOpenDialog(stage);
@@ -902,18 +940,22 @@ public class Window  {
      */
     private CertificateTab openTemplateInGui(File file) {
         try {
-            //        System.out.println("certificate fields : ");
-            //        for (org.bluecipherz.certificatemaker.CertificateField certificateField : wrapper.getCertificateFields()) {
-            //            System.out.println(certificateField.getFieldName()); // debug
-            //        }
-                    // open in new tab
-                    if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
-                    
-                    CertificateTab tab = createNewTab(file);
-                    // save the file path to the registry
-                    UserDataManager.setLastActivityPath(file);
-                    UserDataManager.setCertificateFilePath(file); // TODO broken, no usage yet
-                    return tab;
+            if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
+
+            CertificateTab tab = createNewTab(file);
+            // save the file path to the registry
+            UserDataManager.setLastActivityPath(file);
+            UserDataManager.setCertificateFilePath(file); // TODO broken, no usage yet
+            return tab;
+        } catch (UnmarshalException ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            Alert.showAlertError(PRIMARY_STAGE, "Error", "The specified file is not recognized as a template file. Please try another one.");            
+        } catch (NullPointerException ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            Alert.showAlertError(PRIMARY_STAGE, "Error", "There seems to be a problem with the template xml file.\nEither it was used by an older version of Certificate Maker or it is not a template file.");
+        }catch (OutOfMemoryError ex) {
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            Alert.showAlertError(PRIMARY_STAGE, "Error", "The image file size is too much");
         } catch (Exception ex) {
             Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
             Alert.showAlertError(PRIMARY_STAGE, "Error", ex.toString());
@@ -957,9 +999,9 @@ public class Window  {
     }
     
     public void openCreateCertificateDialog() {
-        int index = tabPane.getSelectionModel().getSelectedIndex();
-        if(index != -1){
-            CertificateWrapper wrapper = ((CertificateTab)tabPane.getSelectionModel().getSelectedItem()).getWrapper();
+        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+        if(tab != null){
+            CertificateWrapper wrapper = tab.getWrapper();
             if(CREATECERTIFICATE_DIALOG == null) {
                 CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
             }
@@ -970,116 +1012,6 @@ public class Window  {
         }
     }
     
-    /*****************
-     * EVENT HANDLERS
-     ****************/
-    
-    public EventHandler<MouseEvent> getAvatarMouseHandler() {
-        return new EventHandler<MouseEvent>() {
-            double initialEventX;
-            double initialEventY;
-            double initialComponentX;
-            double initialComponentY;
-            @Override
-            public void handle(MouseEvent event) {
-                System.out.println("clicked : x" + event.getX() + ", y" + event.getY());
-                EventType<? extends Event> eventType = event.getEventType();
-                ImageView imageView = (ImageView) event.getSource();
-                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
-                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                        initialComponentX = imageView.getX();
-                        initialComponentY = imageView.getY();
-                        initialEventX = event.getX();
-                        initialEventY = event.getY();
-//                        System.out.println("Mode : move"); // debug
-                    } else if (Window.getMouseMode() == MouseMode.DELETE) {
-                        Group parent = (Group) imageView.getParent();
-                        parent.getChildren().remove(imageView);
-                        tab.setAvatarFieldAdded(false);
-//                        System.out.println("Mode : delete"); // debug
-                    } else if(Window.getMouseMode() == MouseMode.EDIT) {
-                        System.out.println("Editing image"); // debug
-                        showEditAvatarDialog(tab, imageView);
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                    double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        imageView.setX(x);
-                        imageView.setY(y);
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        imageView.setX(x);
-                        imageView.setY(y);
-                    }
-                }
-            }
-        };
-    }
-    
-    public EventHandler<MouseEvent> getTextMouseHandler() {
-         return new EventHandler<MouseEvent>() {
-            double initialEventX;
-            double initialEventY;
-            double initialComponentX;
-            double initialComponentY;
-            @Override
-            public void handle(MouseEvent event) {
-                EventType<? extends Event> eventType = event.getEventType();
-                CertificateText text = (CertificateText) event.getSource();
-                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
-                if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                        initialComponentX = text.getX();
-                        initialComponentY = text.getY();
-                        initialEventX = event.getX();
-                        initialEventY = event.getY();
-//                        System.out.println("Mode : move"); // debug
-                    } else if (Window.getMouseMode() == MouseMode.DELETE) {
-                        Group parent = (Group) text.getParent();
-                        parent.getChildren().remove(text);
-                        System.out.println("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
-                        FieldType type = text.getCertificateField().getFieldType();
-                        if(type == FieldType.DATE) tab.setDateFieldAdded(false);
-                        if(type == FieldType.REGNO) tab.setRegnoFieldAdded(false);
-                        if(type == FieldType.COURSE) tab.setCourseFieldAdded(false);
-                        if(type == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(false);
-//                        System.out.println("Mode : delete"); // debug
-                    } else if (Window.getMouseMode() == MouseMode.EDIT) {
-                        
-                        showEditFieldDialog(tab, text);
-//                        System.out.println("Mode : edit"); // debug
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        text.setX(x);
-                        text.setY(y);
-                    }
-                } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
-                    if(Window.getMouseMode() == MouseMode.MOVE) {
-                        double currentX = event.getX();
-                        double currentY = event.getY();
-                        double x = currentX - initialEventX + initialComponentX;
-                        double y = currentY - initialEventY + initialComponentY;
-                        text.setX(x);
-                        text.setY(y);
-                    }
-                }
-            }
-        };
-    }
     
     
     /*************************
@@ -1207,18 +1139,6 @@ public class Window  {
                 System.out.println("regno field added :" + tab.isRegnoFieldAdded());
             }
         });
-        tab.courseFieldProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                System.out.println("course field added :" + tab.isCourseFieldAdded());
-            }
-        });
-        tab.courseDetailsFieldProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                System.out.println("course details field added :" + tab.isCourseDetailsFieldAdded());
-            }
-        });
         
         return tab;
     }
@@ -1238,26 +1158,26 @@ public class Window  {
 //    }
     
     public void showEditAvatarDialog(CertificateTab tab, ImageView imageView) {
-        if(IMAGESIZE_DIALOG == null) {
-            IMAGESIZE_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
+        if(AVATAR_DIALOG == null) {
+            AVATAR_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
         }
-        IMAGESIZE_DIALOG.setImageHolder(tab);
-        IMAGESIZE_DIALOG.editImage(imageView);
+        AVATAR_DIALOG.setImageHolder(tab);
+        AVATAR_DIALOG.editImage(imageView);
     }
     
     public void showAvatarAddDialog(CertificateTab tab, Point2D point) {
-        if(IMAGESIZE_DIALOG == null) {
-            IMAGESIZE_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
+        if(AVATAR_DIALOG == null) {
+            AVATAR_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
         }
-        IMAGESIZE_DIALOG.setImageHolder(tab); // possible bug fix
-        IMAGESIZE_DIALOG.newImage(point);
+        AVATAR_DIALOG.setImageHolder(tab); // possible bug fix
+        AVATAR_DIALOG.newImage(point);
     }
     
     public void addAvatar(CertificateTab tab, Point2D start, Point2D end) {
-        if(IMAGESIZE_DIALOG == null) {
-            IMAGESIZE_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
+        if(AVATAR_DIALOG == null) {
+            AVATAR_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
         }
-        IMAGESIZE_DIALOG.setImageHolder(tab);
+        AVATAR_DIALOG.setImageHolder(tab);
         
         int x = (int) start.getX();
         int y = (int) start.getY();
@@ -1265,7 +1185,7 @@ public class Window  {
         if(start.getY() > end.getY()) y = (int) end.getY();
         int width = (int) Math.abs(start.getX() - end.getX());
         int height = (int) Math.abs(start.getY() - end.getY());
-        IMAGESIZE_DIALOG.newImage(new Point2D(x, y), width, height);
+        AVATAR_DIALOG.newImage(new Point2D(x, y), width, height);
     }
     
     public void showNewFieldDialog(CertificateTab tab, Point2D point) {
@@ -1310,33 +1230,5 @@ public class Window  {
     }
     
     
-    /**
-     * used by outsiders
-     * converts and CertificateField into a Text object
-     * @param certificateField
-     * @return 
-     */
-    public CertificateText createText(final CertificateField certificateField) {
-        CertificateText text = new CertificateText(certificateField);
-        EventHandler<MouseEvent> mouseHandler = getTextMouseHandler();
-        text.setOnMousePressed(mouseHandler);
-        text.setOnMouseDragged(mouseHandler);
-        text.setOnMouseReleased(mouseHandler);
-        return text;
-    }
-
-    public ImageView createAvatarImage(int x, int y, int width, int height) {
-        Image image = new Image(getClass().getResourceAsStream("icons/avatarx1500.png"), width, height, false, true);
-//        System.out.println("image dimensions : " + width + "x" + height); // debug
-        ImageView imageView = new ImageView(image);
-        imageView.setX(x);
-        imageView.setY(y);
-//        System.out.println("image coords : x" + x + " y" + y); // debug
-        EventHandler<MouseEvent> mouseHandler = getAvatarMouseHandler();
-        imageView.setOnMousePressed(mouseHandler);
-        imageView.setOnMouseDragged(mouseHandler);
-        imageView.setOnMouseReleased(mouseHandler);
-        return imageView;
-    }
     
 }
