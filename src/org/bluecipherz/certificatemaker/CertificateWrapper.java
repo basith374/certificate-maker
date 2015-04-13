@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import javafx.collections.ObservableList;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
@@ -36,7 +37,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 @XmlRootElement(name="certificatewrapper")
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class CertificateWrapper implements Cloneable {
-    private ArrayList<CertificateField> certificateFields;
+    private List<CertificateField> certificateFields;
     private String name;
     private File certificateImage;
 
@@ -72,11 +73,11 @@ public class CertificateWrapper implements Cloneable {
 //    @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
 //    @XmlJavaTypeAdapter(CertificateFieldMapAdapter.class)
     @XmlElement(name = "certificatefield")
-    public ArrayList<CertificateField> getCertificateFields() {
+    public List<CertificateField> getCertificateFields() {
         return certificateFields;
     }
 
-    public void setCertificateFields(ArrayList<CertificateField> certificateFields) {
+    public void setCertificateFields(List<CertificateField> certificateFields) {
         this.certificateFields = certificateFields;
     }
 

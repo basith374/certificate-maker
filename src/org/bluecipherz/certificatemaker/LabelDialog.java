@@ -292,8 +292,9 @@ class LabelDialog extends Stage {
     
     
     private void addMinimalItems() {
-        if(prevCategory == FieldType.TEXT) removeTextItems();
-        if(prevCategory == FieldType.ARRAY) removeArrayItems();
+//        if(prevCategory == FieldType.TEXT) removeTextItems();
+//        if(prevCategory == FieldType.ARRAY) removeArrayItems();
+        removeCommonExtras();
     }
     
     private void addArrayItems() {
@@ -335,6 +336,17 @@ class LabelDialog extends Stage {
         gridPane.getChildren().remove(textField);
         gridPane.getChildren().remove(repeatingLabel);
         gridPane.getChildren().remove(repeatCheckBox);
+    }
+    
+    private void removeCommonExtras() {
+        gridPane.getChildren().remove(textLabel);
+        gridPane.getChildren().remove(textField);
+        gridPane.getChildren().remove(repeatingLabel);
+        gridPane.getChildren().remove(repeatCheckBox);
+        gridPane.getChildren().remove(coursesLabel);
+        gridPane.getChildren().remove(listView);
+        gridPane.getChildren().remove(addButton);
+        gridPane.getChildren().remove(removeButton);
     }
     
     /**
@@ -431,6 +443,7 @@ class LabelDialog extends Stage {
         if (fontSize != null) fontSizeBox.getSelectionModel().select(window.getFontSizeList().indexOf(Integer.valueOf(fontSize)));
         String fontStyle = UserDataManager.getDefaultFontStyle();
         if (fontStyle != null) fontStyleBox.getSelectionModel().select(window.getFontStyleList().indexOf(fontStyle));
+        listView.getItems().clear();
     }
 
     private ListView createNewListView() {

@@ -96,7 +96,7 @@ class NewTemplateDialog extends Stage {
                 String imagePath = imagePathFld.getText();
                 if (!"".equalsIgnoreCase(fileName) && !"".equalsIgnoreCase(imagePath)) {
                     close();
-                    final CertificateWrapper certificateWrapper = certificateUtils.createCertificateWrapper(fileName, imagePath);
+                    final CertificateWrapper certificateWrapper = certificateUtils.createDummyWrapper(fileName, imagePath);
 //                    newFileDialog.createNewTab(certificateWrapper).setFile(new File(fileName)); // create new tab and save path for later saving
                     Platform.runLater(new Runnable() {
                         @Override
@@ -106,6 +106,7 @@ class NewTemplateDialog extends Stage {
                     });
                     //                        createNewTab(fileName, imagePath);
                 } else {
+                    Alert.showAlertError(owner, "Error", "Please give a valid filename and image location");
                     // TODO error message
                     System.out.println("please give a filename and image location...");
                 }

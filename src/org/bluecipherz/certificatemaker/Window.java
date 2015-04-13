@@ -113,7 +113,7 @@ public class Window  {
     private static LabelDialog LABEL_DIALOG;
     private static CreateCertificateDialog CREATECERTIFICATE_DIALOG;
     private static AvatarDialog AVATAR_DIALOG;
-    private static About ABOUT_DIALOG;
+    private static AboutDialog ABOUT_DIALOG;
     private static LoadingBox LOADINGBOX;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
     
@@ -396,7 +396,7 @@ public class Window  {
         };
         List<String> recent = UserDataManager.getRecentTemplates();
         if(recent != null) {
-            System.out.println("Loading recent templates"); // debug
+//            System.out.println("Loading recent templates"); // debug
             for(String path : recent) {
                 MenuItem recentMenu = new MenuItem(path);
                 recentMenu.setOnAction(recentHandler);
@@ -518,7 +518,7 @@ public class Window  {
 //                    showThemWhatBCZisReallyAbout();
 //                    blowupcomputer();
                     if(ABOUT_DIALOG == null) {
-                        ABOUT_DIALOG = new About(PRIMARY_STAGE);
+                        ABOUT_DIALOG = new AboutDialog(PRIMARY_STAGE);
                     }
                     ABOUT_DIALOG.show();
                 } else if("a3 output".equalsIgnoreCase(action)) {
@@ -1001,10 +1001,11 @@ public class Window  {
     public void openCreateCertificateDialog() {
         CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
         if(tab != null){
-            CertificateWrapper wrapper = tab.getWrapper();
+            CertificateWrapper wrapper = tab.getUpdatedWrapper();
             if(CREATECERTIFICATE_DIALOG == null) {
                 CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
             }
+//            LOADINGBOX.showProgressing(CREATECERTIFICATE_DIALOG.populatingProgressProperty());
             CREATECERTIFICATE_DIALOG.openFor(wrapper);
         } else {
             System.out.println("unknown condition : tab index out of bounds"); // debug
@@ -1032,130 +1033,28 @@ public class Window  {
     
 
     public CertificateTab createNewTab(final File file) throws Exception {
-        CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
-        CertificateTab tab = createNewTab(certificateWrapper);
-        tab.setFile(file);
-        return tab;
-    }
-    
-    /**
-     * used by outsiders, hence public
-     * Create a new tab using a certificate wrapper. the template will be
-     * loaded into and tab and the image will also be displayed
-     * @param certificateWrapper
-     */
-    public CertificateTab createNewTab(final CertificateWrapper wrapper) {
         if(CertificateTab.getPRIMARY_STAGE() == null) CertificateTab.setPRIMARY_STAGE(PRIMARY_STAGE);
         if(CertificateTab.getWINDOW() == null) CertificateTab.setWINDOW(this);
-        final CertificateWrapper certificateWrapper = wrapper;
-        //tab children heirarchy
-        //tab -> scrollpane -> group -> imageview,text
-        final CertificateTab tab = new CertificateTab(wrapper);
-        LOADINGBOX.showProgressing(tab.loadImage());
-//        
-//        final File imageFile = certificateWrapper.getCertificateImage();
-//        tab.setText(certificateWrapper.getName());
-//        final ScrollPane scrollPane = new ScrollPane();
-//        // dont know the real use of this,
-//        scrollPane.viewportBoundsProperty().addListener(new ChangeListener<Bounds>() {
-//            @Override
-//            public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
-//                Node content = scrollPane.getContent(); // content is group
-//                scrollPane.setFitToWidth(content.prefWidth(-1)<t1.getWidth());
-//                scrollPane.setFitToHeight(content.prefHeight(-1)<t1.getHeight());
-//            }
-//        });
-//        
-//        Group group = new Group();
-        
-//        final ImageView imageView = new ImageView(); // fixture
-//        final Image image = new Image(imageFile.toURI().toString(), true);
-////        progressBar.progressProperty().bind(image.progressProperty());
-////        addProgressBar();
-//        LOADINGBOX.showProgressing(image.progressProperty());
-//        image.progressProperty().addListener(new ChangeListener<Number>() {
-//            @Override
-//            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-////                System.out.println("oldvalue " + oldValue.toString() + ", newvalue " + newValue.toString());
-////                statusLabel.setText("Loading : " + (int) newValue.doubleValue() + "%");
-//                if(newValue.intValue() == 1) {
-//                    imageView.setImage(image);
-////                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
-////                    removeProgressBar();
-//                }
-//            }
-//
-//        });
-//        EventHandler<MouseEvent> handler = getImageMouseHandler();
-//        imageView.setOnMousePressed(handler);
-//        imageView.setOnMouseDragged(handler);
-//        imageView.setOnMouseReleased(handler);
-        
-//        group.getChildren().add(imageView);
-        // after adding the imageview, add the fields to the opened certificate if there are any
-//        if(!certificateWrapper.getCertificateFields().isEmpty()) {   
-//            for (CertificateField certificateField : wrapper.getCertificateFields()) {
-//                if(certificateField.getFieldType() == FieldType.IMAGE) {
-//                    // add avatar image
-//                    ImageView avatarImage = createAvatarImage(certificateField.getX(), certificateField.getY(), certificateField.getWidth(), certificateField.getHeight());
-//                    group.getChildren().add(avatarImage);
-//                    tab.setAvatarFieldAdded(true);
-//                } else { // its a text object as long as its not an image
-//                    CertificateText certificateText = createText(certificateField);
-//                    certificateText.setX(certificateField.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
-//                    group.getChildren().add(certificateText);
-//                    if(disallowmultiplefields) {
-//                        if(certificateField.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
-//                        if(certificateField.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
-//                        if(certificateField.getFieldType() == FieldType.COURSE) tab.setCourseFieldAdded(true);
-//                        if(certificateField.getFieldType() == FieldType.COURSEDETAILS) tab.setCourseDetailsFieldAdded(disallowmultiplefields);
-//                    }
-//                }
-//            }
-//        }
-//        imageView.setFitHeight(scrollPane.getHeight());
-//        imageView.setFitWidth(scrollPane.getWidth());        
-//        scrollPane.setContent(group);
-//        System.out.println("Adding to scrollpane " + scrollPane.toString()); // debug
-//        tab.setContent(scrollPane);
-//        System.out.println("adding tab to tabpane"); // debug
-        tabPane.getTabs().add(tab);
-        
-        // TODO tab change action
-        // TODO before tab close action
-//        refreshTabPaneEventHandlers();
-
-//        tab.setCertificateWrapper(certificateWrapper); // fixture
-        
-        tab.dateFieldProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                System.out.println("date field added :" + tab.isDateFieldAdded());
-            }
-        });
-        tab.regnoFieldProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                System.out.println("regno field added :" + tab.isRegnoFieldAdded());
-            }
-        });
-        
+        // unmarshall xml file to wrapper
+        CertificateWrapper wrapper = certificateUtils.openTemplate(file);
+        // pass the unmarshaller wrapper to the tab
+        CertificateTab tab = new CertificateTab(wrapper);
+        LOADINGBOX.showProgressing(tab.loadImage()); // show progress indicator while loading image
+        tabPane.getTabs().add(tab); // add the tab to tabpane
+        tab.setFile(file); // for resaving file later
         return tab;
     }
     
-//    public void refreshTabPaneEventHandlers() {
-//        Set<Node> nodes = tabPane.lookupAll(".tab-close-button");
-//        for(final Node node : nodes) {
-//            node.setUserData(node.getOnMouseReleased());
-//            node.setOnMouseReleased(new EventHandler<MouseEvent>() {
-//                @Override
-//                public void handle(MouseEvent t) {
-////                    System.out.println("whoah!");
-//                    ((EventHandler<MouseEvent>)node.getUserData()).handle(t);
-//                }
-//            });
-//        }
-//    }
+    public CertificateTab createNewTab(CertificateWrapper dummyWrapper) {
+        if(CertificateTab.getPRIMARY_STAGE() == null) CertificateTab.setPRIMARY_STAGE(PRIMARY_STAGE);
+        if(CertificateTab.getWINDOW() == null) CertificateTab.setWINDOW(this);
+        //tab children heirarchy
+        //tab -> scrollpane -> group -> imageview,text
+        CertificateTab tab = new CertificateTab(dummyWrapper);
+        LOADINGBOX.showProgressing(tab.loadImage());
+        tabPane.getTabs().add(tab);
+        return tab;
+    }
     
     public void showEditAvatarDialog(CertificateTab tab, ImageView imageView) {
         if(AVATAR_DIALOG == null) {
@@ -1202,33 +1101,6 @@ public class Window  {
         LABEL_DIALOG.prepareAndShowEditTextDialog(tab, text);
     }
 
-//    public static void main(String[] args) { launch(args); }
-    
-    
-    private String convertToStringSize(long length) {
-        String result = null;
-        if(length != 0) {
-            if(length < 1000) { // Bytes
-                result = String.valueOf(length);
-                result = result.substring(0, result.lastIndexOf(".") + 3) + "B";
-            } else if(length < 1000 * 1000) { // kilo bytes
-                result = String.valueOf(length / 1000f);
-                result = result.substring(0, result.lastIndexOf(".") + 3) + "KB";
-            } else if(length < 1000 * 1000 * 1000) { // mega bytes
-                result = String.valueOf(length / 1000000f);
-                result = result.substring(0, result.lastIndexOf(".") + 3) + "MB";
-            }
-        }
-        return result;
-    }
-    
-    public static double round(double value, int places) {
-        if(places < 0) throw new IllegalArgumentException();
-        long factor = (long) Math.pow(10, places);
-        long tmp = Math.round(value);
-        return (double) tmp / factor;
-    }
-    
-    
+//    public static void main(String[] args) { launch(args); } // this was first the application class
     
 }

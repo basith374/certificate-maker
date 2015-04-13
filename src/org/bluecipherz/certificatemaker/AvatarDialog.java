@@ -66,15 +66,19 @@ public class AvatarDialog extends Stage {
         @Override
         public void handle(ActionEvent t) {
             if(!"".equals(widthField.getText()) || !"".equals(heightField.getText())) {
-                int width = Integer.parseInt(widthField.getText());
-                int height = Integer.parseInt(heightField.getText());
-                if(width > 0 && height > 0) {
-                    CertificateField field = generateCertificateField(imageX, imageY, width, height);
-                    ImageView image = tab.createAvatarImage(field);
-                    tab.addImage(image, field);
-                    tab.setAvatarFieldAdded(true);
-                    close();
-                } // else give positive number
+                try {
+                    int width = Integer.parseInt(widthField.getText());
+                    int height = Integer.parseInt(heightField.getText());
+                    if(width > 0 && height > 0) {
+                        CertificateField field = generateCertificateField(imageX, imageY, width, height);
+                        ImageView image = tab.createAvatarImage(field);
+                        tab.addImage(image, field);
+                        tab.setAvatarFieldAdded(true);
+                        close();
+                    } // else give positive number
+                } catch(NumberFormatException ex) {
+                    Alert.showAlertError(primaryStage, "Error", "Please enter numbers, not alphabets");
+                }
             } else {
                 Alert.showAlertError(primaryStage, "Error", "Please fill in the fields");
             }

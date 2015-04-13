@@ -51,8 +51,8 @@ public class ResourceManger {
     public Image iconx16;
     public Image iconx32;
     public Image iconx48;
-    public Image premiumsplash;
-    public Image demosplash;
+    public Image iconx100;
+    public Image splash;
     public Image avatarx32;
     public Image avatarx320;
     public Image errorx16;
@@ -95,6 +95,7 @@ public class ResourceManger {
         this.iconx16 = new Image(getClass().getResourceAsStream("icons/iconx16.png"));
         this.iconx32 = new Image(getClass().getResourceAsStream("icons/iconx32.png"));
         this.iconx48 = new Image(getClass().getResourceAsStream("icons/iconx48.png"));
+        this.iconx100 = new Image(getClass().getResourceAsStream("icons/iconx100.png"));
         this.errorx16 = new Image(getClass().getResourceAsStream("icons/errorx16.png"));
         this.errorx32 = new Image(getClass().getResourceAsStream("icons/errorx32.png"));
         this.errorx48 = new Image(getClass().getResourceAsStream("icons/errorx48.png"));
@@ -110,8 +111,8 @@ public class ResourceManger {
     }
     
     public void loadSplashResource() {
-        this.premiumsplash = new Image(getClass().getResourceAsStream("icons/premiumsplash.png"));
-        this.demosplash = new Image(getClass().getResourceAsStream("icons/demosplash.png"));
+//        this.splash = new Image(getClass().getResourceAsStream("icons/premiumsplash.png"));
+        this.splash = new Image(getClass().getResourceAsStream("icons/demosplash.png"));
     }
     
 }

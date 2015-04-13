@@ -19,8 +19,12 @@ package org.bluecipherz.certificatemaker;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -152,11 +156,19 @@ public class CertificateUtils {
      * @param imagePath
      * @return 
      */
-    public CertificateWrapper createCertificateWrapper(String name, String imagePath) {
+    public CertificateWrapper createDummyWrapper(String name, String imagePath) {
         CertificateWrapper certificateWrapper = new CertificateWrapper();
         certificateWrapper.setName(name); // used as tab name and save name
         certificateWrapper.setCertificateImage(new File(imagePath));
-        certificateWrapper.setCertificateFields(new ArrayList<CertificateField>());
+        List<CertificateField> fields = new ArrayList<>();
+//        ObservableList<CertificateField> fields = FXCollections.observableArrayList();
+//        fields.addListener(new ListChangeListener<CertificateField>() {
+//            @Override
+//            public void onChanged(ListChangeListener.Change<? extends CertificateField> change) {
+//                System.out.println("wrapper list changed : current size " + change.getList().size());
+//            }
+//        });
+        certificateWrapper.setCertificateFields(fields);
         return certificateWrapper;
     }
     
@@ -169,13 +181,12 @@ public class CertificateUtils {
     public CertificateWrapper saveFileAtTab(CertificateTab tab, File file) {
 //        ScrollPane scrollPane = (ScrollPane) tab.getContent();
 //        Group group = (Group) scrollPane.getContent();
-        CertificateWrapper wrapper = tab.getWrapper();
+        CertificateWrapper wrapper = tab.getUpdatedWrapper();
         System.out.println("retrieving wrapper : total contents " + wrapper.getCertificateFields().size());
 //        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
 //        wrapper.setCertificateFields(certificateFieldList);
 //        System.out.println("populated wrapper :\n" + wrapper); // very helpful debug
         createCertificateFile(file, wrapper);
-        tab.setChanged(false);
 //        tab.setFile(file); // done at an upper level
         UserDataManager.setLastActivityPath(file);
         return wrapper;

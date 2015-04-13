@@ -22,6 +22,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Scene;
@@ -80,6 +81,7 @@ public class NewCertificateDialog extends Stage {
         browseButton.setDisable(true);
         final Button cancelButton = new Button("_Cancel");
         Button okButton = new Button("  _OK  ");
+        GridPane.setHalignment(cancelButton, HPos.RIGHT);
         
 //        browseButton.getScene().addMnemonic(new Mnemonic(browseButton, new KeyCodeCombination(KeyCode.B, KeyCombination.ALT_DOWN)));
 //        cancelButton.getScene().addMnemonic(new Mnemonic(cancelButton, new KeyCodeCombination(KeyCode.C, KeyCombination.ALT_DOWN)));

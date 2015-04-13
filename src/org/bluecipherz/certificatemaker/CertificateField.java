@@ -19,6 +19,8 @@ package org.bluecipherz.certificatemaker;
 
 import java.util.List;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -26,6 +28,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.text.Font;
@@ -51,6 +54,17 @@ public class CertificateField {
     private int width;
     private int height;
     private boolean repeating;
+    
+    private ObservableList<CertificateField> parent;
+    private ReadOnlyBooleanWrapper changed = new ReadOnlyBooleanWrapper(false);
+
+    public ReadOnlyBooleanProperty changedProperty() {
+        return changed.getReadOnlyProperty();
+    }
+    
+    public void setParent(ObservableList<CertificateField> parent) {
+        this.parent = parent;
+    }
 
     public boolean isRepeating() {
         return repeating;
@@ -157,20 +171,31 @@ public class CertificateField {
     public void observe(final Node node) {
         if(node instanceof CertificateText) {
             CertificateText text = (CertificateText) node;
+            text.parentProperty().addListener(new ChangeListener<Parent>() {
+                @Override
+                public void changed(ObservableValue<? extends Parent> ov, Parent t, Parent t1) {
+                    if(t1 == null) parent.remove(this);
+//                    System.out.println("field removed, wrapper contents:" + parent.size());
+                    changed.set(true);
+                }
+            });
             text.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
                 @Override
                 public void changed(ObservableValue<? extends Bounds> ov, Bounds oldBounds, Bounds newBounds) {
-                    int x = (int) (newBounds.getMinX() + newBounds.getMaxX() / 2);
+                    int x = (int) (newBounds.getMinX() + (newBounds.getMaxX() - newBounds.getMinX()) / 2);
 //                    int y = (int) (newBounds.getMinY() + newBounds.getMaxY() / 2);
-                    int y = (int) newBounds.getMinY();
+                    int y = (int) (newBounds.getMinY() + (newBounds.getMaxY() - newBounds.getMinY()) / 2);
                     setX(x);
                     setY(y);
+//                    System.out.println("coords :" + x + "," + y);
+                    changed.set(true);
                 }
             });
             text.textProperty().addListener(new ChangeListener<String>() {
                 @Override
                 public void changed(ObservableValue<? extends String> ov, String t, String newText) {
                     setFieldName(newText);
+                    changed.set(true);
                 }
             });
             if(fieldType == FieldType.ARRAY) {
@@ -179,6 +204,7 @@ public class CertificateField {
                     public void onChanged(ListChangeListener.Change<? extends String> change) {
                         ObservableList<String> list = (ObservableList<String>) change.getList();
                         setArray(list);
+                        changed.set(true);
                     }
                 });
             }
@@ -187,6 +213,7 @@ public class CertificateField {
                     @Override
                     public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean repeating) {
                         setRepeating(repeating);
+                        changed.set(true);
                     }
                 });
             }
@@ -196,6 +223,7 @@ public class CertificateField {
                     setFontFamily(newFont.getFamily());
                     setFontSize(newFont.getSize());
                     setFontStyle(newFont.getStyle());
+                    changed.set(true);
                 }
             });
         } else if(node instanceof ImageView) {
@@ -205,6 +233,7 @@ public class CertificateField {
                 public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds newBounds) {
                     setX((int) newBounds.getMinX());
                     setY((int) newBounds.getMinY());
+                    changed.set(true);
                 }
             });
             imageView.imageProperty().addListener(new ChangeListener<Image>() {
@@ -212,6 +241,7 @@ public class CertificateField {
                 public void changed(ObservableValue<? extends Image> ov, Image t, Image newImage) {
                     setWidth((int) newImage.getWidth());
                     setHeight((int) newImage.getHeight());
+                    changed.set(true);
                 }
             });
         }
@@ -225,20 +255,20 @@ public class CertificateField {
         if(fieldType != FieldType.IMAGE) {
             if(fieldType == FieldType.TEXT) output = output.concat(", fieldname=" + fieldName);
             output = output.concat(", fontsize=" + fontSize + ", fontfamily=" + fontFamily + ", fontstyle=" + fontStyle);
-//            if(fieldType == FieldType.COURSE) {
-//                output = output.concat(", courses : ");
-//                if(courses != null) {
-//                    if(!courses.isEmpty()) {
-//                        for(String course : courses) {
-//                            output = output.concat(course+",");
-//                        }
-//                    } else {
-//                        System.out.println("Courses is empty"); // debug
-//                    }
-//                } else {
-//                    System.out.println("Courses has become null."); // debug
-//                }
-//            }
+            if(fieldType == FieldType.ARRAY) {
+                output = output.concat(", values : ");
+                if(array != null) {
+                    if(!array.isEmpty()) {
+                        for(String element : array) {
+                            output = output.concat(element+",");
+                        }
+                    } else {
+                        System.out.println("array is empty"); // debug
+                    }
+                } else {
+                    System.out.println("array has become null."); // debug
+                }
+            }
         }
         return output.concat("}\n");
     }

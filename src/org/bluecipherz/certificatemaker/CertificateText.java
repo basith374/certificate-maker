@@ -65,7 +65,7 @@ public final class CertificateText extends Text {
         FontWeight fw = FontWeight.findByName(field.getFontStyle());
         this.setFont(Font.font(field.getFontFamily(), fw, field.getFontSize()));
         if(field.getFieldType() == FieldType.TEXT) { setText(field.getFieldName()); repeatin.set(field.isRepeating()); }
-        if(field.getFieldType() == FieldType.ARRAY) array.setAll(field.getArray());
+        if(field.getFieldType() == FieldType.ARRAY) { setText(field.getFieldName()); array.setAll(field.getArray()); }
     }
 
     public ReadOnlyObjectProperty<FieldType> fieldTypeProperty() {

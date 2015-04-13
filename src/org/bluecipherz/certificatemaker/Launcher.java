@@ -53,9 +53,9 @@ public class Launcher extends Application {
 
     @Override public void init() {
         ResourceManger.getInstance().loadSplashResource();
-        ImageView splash = new ImageView(ResourceManger.getInstance().premiumsplash);
+        ImageView splashimage = new ImageView(ResourceManger.getInstance().splash);
         splashLayout = new VBox();
-        splashLayout.getChildren().add(splash);
+        splashLayout.getChildren().add(splashimage);
         splashLayout.setEffect(new DropShadow());
     }
 

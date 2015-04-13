@@ -40,6 +40,7 @@ import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
@@ -150,30 +151,38 @@ class CreateCertificateDialog extends Stage {
         finishButton.setOnAction(buttonAction);
     }
 
-    public void openFor(CertificateWrapper newWrapper) {
+    public void openFor(final CertificateWrapper newWrapper) {
         iws.setDefaultExtension(UserDataManager.getDefaultImageFormat()); // update changes
         iws.setA3Output(UserDataManager.isA3Output()); // update changes
-//        certificateImage = new Image(wrapper.getCertificateImage().toURI().toString());
-        if(this.wrapper == null) {
-            System.out.println("setting new wrapper..."); // debug
-            gridPane = createEntryFieldsandLabels(newWrapper); // MEGA FUNCTION
-            this.wrapper = (CertificateWrapper) newWrapper.clone(); // new wrapper bug solution
+        if(newWrapper.getCertificateFields().size() > 0) {
+            // check if regno is specified
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    boolean noregno = true;
+                    for(CertificateField field : newWrapper.getCertificateFields()) {
+                        if(field.getFieldType() == FieldType.REGNO) noregno = false;
+                    }
+                    if(noregno) Alert.showAlertWarning(primaryStage, "Warning", "There is no regno field specified, you may not receive an output");
+                }
+            });
+            // the real thing
+            this.wrapper = newWrapper;
+            gridPane = createEntryFieldsandLabels(wrapper);
+            iws.setCertificateImage(new Image(this.wrapper.getCertificateImage().toURI().toString()));
+            scene.setRoot(gridPane);
+            setScene(scene);
+            sizeToScene();
+            show();
+            populatingProgress.addListener(new ChangeListener<Number>() {
+                @Override
+                public void changed(ObservableValue<? extends Number> ov, Number t, Number loaded) {
+                    System.out.println("Populating " + loaded.doubleValue() * 100 + "%");
+                }
+            });
         } else {
-//            System.out.println("old wrapper : " + this.wrapper); // new debug
-//            System.out.println("new wrapper : " + newWrapper); // new debug
-            if(!this.wrapper.equals(newWrapper)) {
-                System.out.println("wrapper changed..."); // debug
-                gridPane = createEntryFieldsandLabels(newWrapper);
-                this.wrapper = (CertificateWrapper) newWrapper.clone(); // new wrapper bug solution
-            } else {
-                System.out.println("wrapper hasnt changed..."); // debug
-            }
+            Alert.showAlertError(primaryStage, "Error", "There are no fields in this template");
         }
-        iws.setCertificateImage(new Image(this.wrapper.getCertificateImage().toURI().toString()));
-        scene.setRoot(gridPane);
-        setScene(scene);
-        sizeToScene();
-        show();
     }
     
     private GridPane createEntryFieldsandLabels(final CertificateWrapper wrapper) {
@@ -512,5 +521,9 @@ class CreateCertificateDialog extends Stage {
                 }
             }
         };
+    }
+    
+    public ReadOnlyDoubleProperty populatingProgressProperty() {
+        return populatingProgress.getReadOnlyProperty();
     }
 }
