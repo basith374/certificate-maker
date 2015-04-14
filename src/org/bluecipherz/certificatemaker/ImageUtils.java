@@ -91,7 +91,7 @@ public class ImageUtils {
             g2d.drawString(text, centerX, centerY);
             ImageIO.write(sourceImage, "png", destImageFile);
             g2d.dispose();
-            System.out.println("The tex watermark is added to the image");
+            Debugger.log("The tex watermark is added to the image");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -107,7 +107,7 @@ public class ImageUtils {
         BufferedImage img = null;
         try {
             img = ImageIO.read(new File(path));
-            System.out.println("Opening image : " + path);
+            Debugger.log("Opening image : " + path);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -201,51 +201,51 @@ public class ImageUtils {
                 int maxheight = field.getKey().getHeight();
                 int imgwidth = buffimg.getWidth();
                 int imgheight = buffimg.getHeight();
-                System.out.println("image dimensions : width" + imgwidth + ", height" + imgheight); // debug
-                System.out.println("max image dimensions : width" + maxwidth + ", height" + maxheight); // debug
+                Debugger.log("image dimensions : width" + imgwidth + ", height" + imgheight); // debug
+                Debugger.log("max image dimensions : width" + maxwidth + ", height" + maxheight); // debug
                 // scale image if larger than specified
                 if(imgwidth > maxwidth || imgheight > maxheight) {
-                    System.out.println("image dimensions more than normal ; rescaling..."); // debug
+                    Debugger.log("image dimensions more than normal ; rescaling..."); // debug
                     AffineTransform at = new AffineTransform();
                      // scale either proportionally or fixed size
                     boolean proportional = false;
                     double xscale = ((double)maxwidth / (double)imgwidth);
                     double yscale = ((double)maxheight / (double)imgheight);
-                    System.out.println("calculated scale factors : x" + xscale + ", y" + yscale); // debug
+                    Debugger.log("calculated scale factors : x" + xscale + ", y" + yscale); // debug
                     if(imgwidth > maxwidth && imgheight > maxheight){ // if width and height are excess
-                        System.out.println("scaling both width & height"); // debug
+                        Debugger.log("scaling both width & height"); // debug
                         if(proportional) {
-                            System.out.println("Proportional scale"); // debug
+                            Debugger.log("Proportional scale"); // debug
                             double scalefactor;
                             if(xscale > yscale) {
                                 scalefactor = xscale;
                             } else if(yscale > xscale) {
                                 scalefactor = yscale;
                             } else {
-                                System.out.println("Both scale factors are equals :");
+                                Debugger.log("Both scale factors are equals :");
                                 scalefactor = xscale; // or yscale, either would suffice
                             }
                             at.scale(scalefactor, scalefactor);
                         } else {
-                            System.out.println("Non-Proportional scale"); // debug
+                            Debugger.log("Non-Proportional scale"); // debug
                             at.scale(xscale, yscale);
                         }
                     } else if(imgwidth > maxwidth) { // if width is excess
-                        System.out.println("scaling both width"); // debug
+                        Debugger.log("scaling both width"); // debug
                         if(proportional) {
-                            System.out.println("Proportional scale"); // debug
+                            Debugger.log("Proportional scale"); // debug
                             at.scale(xscale, xscale);
                         } else {
-                            System.out.println("Non-Proportional scale"); // debug
+                            Debugger.log("Non-Proportional scale"); // debug
                             at.scale(xscale, 1.0);
                         }
                     } else if(imgheight > maxheight) { // if height is excess
-                        System.out.println("scaling both height"); // debug
+                        Debugger.log("scaling both height"); // debug
                         if(proportional) {
-                            System.out.println("Proportional scale"); // debug
+                            Debugger.log("Proportional scale"); // debug
                             at.scale(yscale, yscale);
                         } else {
-                            System.out.println("Non-Proportional scale"); // debug
+                            Debugger.log("Non-Proportional scale"); // debug
                             at.scale(1.0, yscale);
                         }
                     }
@@ -254,7 +254,7 @@ public class ImageUtils {
                 } else {
                     g2.drawImage(buffimg, null, x, y); // image dimensions less than specified
                 }
-                System.out.println("drawImage(" + field.getValue() + ")"); // debug
+                Debugger.log("drawImage(" + field.getValue() + ")"); // debug
             } else {
                 CertificateText text = new CertificateText(field.getKey());
                 text.setText(field.getValue());
@@ -268,7 +268,7 @@ public class ImageUtils {
                 // end convert
                 g2.setFont(new Font(fontFamily, fontStyle, fontSize));
                 g2.drawString(field.getValue(), x, y);
-                System.out.println("drawString(" + field.getValue() + ")"); // debug
+                Debugger.log("drawString(" + field.getValue() + ")"); // debug
             }
             index++;
         }
@@ -283,11 +283,11 @@ public class ImageUtils {
         BufferedImage newImage;
 //        if("jpg".equalsIgnoreCase(UserDataManager.getDefaultImageFormat())) {
             newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-            System.out.println("combineImages() IMAGE TYPE : TYPE_INT_RGB"); // debug
-            System.out.println("img1 type :" + img1.getType() + ", img2 type :" + img2.getType());
+            Debugger.log("combineImages() IMAGE TYPE : TYPE_INT_RGB"); // debug
+            Debugger.log("img1 type :" + img1.getType() + ", img2 type :" + img2.getType());
 //        } else {
 //            newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // png
-//            System.out.println("combineImages() IMAGE TYPE : TYPE_INT_ARGB"); // debug
+//            Debugger.log("combineImages() IMAGE TYPE : TYPE_INT_ARGB"); // debug
 //        }
         Graphics2D g2 = newImage.createGraphics();
         Color oldColor = g2.getColor();

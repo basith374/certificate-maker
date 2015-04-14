@@ -40,9 +40,9 @@ public class RegexUtils {
             String s = matcher.group(1);
             Integer no = Integer.parseInt(s);
             no++;
-//            System.out.println("incremented :" + no); // debug
+//            Debugger.log("incremented :" + no); // debug
             if(s.length() > no.toString().length()) {
-//                System.out.println("fixing"); // debug
+//                Debugger.log("fixing"); // debug
                 int zeros = s.length() - no.toString().length();
                 String a = "";
                 for(int i = 0; i < zeros; i++)
@@ -52,7 +52,7 @@ public class RegexUtils {
                 s = no.toString();
             }
             //
-//            System.out.println("fixed : " + s); // debug
+//            Debugger.log("fixed : " + s); // debug
             matcher.appendReplacement(result, s);
 //            matcher.appendReplacement(result, String.valueOf(Integer.parseInt(matcher.group(1)) + 1));
         }

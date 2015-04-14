@@ -136,15 +136,15 @@ public class NewCertificateDialog extends Stage {
         radiogroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
             @Override
             public void changed(ObservableValue<? extends Toggle> ov, Toggle oldToggle, Toggle newToggle) {
-//                System.out.println("radio selection changed"); // debug
+//                Debugger.log("radio selection changed"); // debug
                 RadioButton selected = (RadioButton) newToggle;
                 if(selected.equals(radioButton1)) {
-//                    System.out.println("selected 1");
+//                    Debugger.log("selected 1");
 //                    pathField.setEditable(false); // not right
                     pathField.setDisable(true);
                     browseButton.setDisable(true);
                 } else {
-//                    System.out.println("selected 2");
+//                    Debugger.log("selected 2");
 //                    pathField.setEditable(true); // not right
                     pathField.setDisable(false);
                     browseButton.setDisable(false);

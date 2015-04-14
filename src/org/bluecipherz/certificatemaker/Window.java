@@ -16,18 +16,12 @@
  * along with Certificate Maker.  If not, see <http://www.gnu.org/licenses/>.
  */
 package org.bluecipherz.certificatemaker;
-//import com.google.gson.Gson;
-import com.sun.deploy.resources.ResourceManager;
 import java.awt.GraphicsEnvironment;
-import java.awt.Transparency;
-import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventType;
-import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.scene.*;
 import javafx.scene.Cursor;
@@ -37,61 +31,29 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.prefs.Preferences;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableMap;
-import javafx.concurrent.Task;
-import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Paint;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.StrokeType;
-import javafx.stage.StageStyle;
 import javax.xml.bind.UnmarshalException;
+import org.apache.log4j.Logger;
 
 /**
  * This class is the main thing with over 1k LOC. technically speaking. however i think there are more comments than
@@ -133,6 +95,8 @@ public class Window  {
     private HBox statusBar;
     private Label messageLabel;
 //    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
+    
+    final static Logger logger = Logger.getLogger(Window.class);
 
     private enum DIALOG_TYPE {
         OPEN,
@@ -261,6 +225,7 @@ public class Window  {
                     MOUSEMODE = MODE_DELETE;
                     // TODO IMPORTANT set entry deletion mouse cursor
 //                    setCursorIconForAllTextAtAllTab(Cursor.cursor(""));  // revert
+                    setCursorIconForAllTextAtAllTab(new ImageCursor(ResourceManger.getInstance().crossx1));
                     resetCursorIconForAllTab();
                 } else if(button5.equals(button)) { // EDIT
                     MOUSEMODE = MODE_EDIT;
@@ -287,7 +252,7 @@ public class Window  {
 //        button3.setGraphic(new ImageView(new File("icon/addx32.png").toURI().toString()));
 //        button4.setGraphic(new ImageView(new File("icon/delx32.png").toURI().toString()));
 //        button5.setGraphic(new ImageView(new File("icon/edit32.png").toURI().toString()));
-//        System.out.println("Icons set");
+//        Debugger.log("Icons set");
 
         // icons
 //        button1.set
@@ -341,14 +306,16 @@ public class Window  {
         saveAsMenu.setMnemonicParsing(true);
         exitMenu.setMnemonicParsing(true);
 
-        fileMenu.getItems().add(newCertificateMenu);
-        fileMenu.getItems().add(new SeparatorMenuItem());
-        fileMenu.getItems().add(newMenu);
-        fileMenu.getItems().add(openMenu);
-        fileMenu.getItems().add(openRecentMenu);
-        fileMenu.getItems().add(saveMenu);
-        fileMenu.getItems().add(saveAsMenu);
-        fileMenu.getItems().add(exitMenu);
+        fileMenu.getItems().addAll(
+                newCertificateMenu,
+                new SeparatorMenuItem(),
+                newMenu,
+                openMenu,
+                openRecentMenu,
+                saveMenu,
+                saveAsMenu,
+                exitMenu
+        );
         
         EventHandler<ActionEvent> handler = getMenuEventHandler();
         // action listeners
@@ -379,7 +346,7 @@ public class Window  {
             public void handle(ActionEvent t) {
                 MenuItem source = (MenuItem) t.getSource();
                 File file = new File(source.getText());
-                System.out.println(file.getAbsolutePath()); // debug
+                Debugger.log(file.getAbsolutePath()); // debug
                 if(file.exists()) {
                     int index = getTabIndex(file);
                     if(index == -1) {
@@ -389,21 +356,21 @@ public class Window  {
                         tabPane.getSelectionModel().select(index);
                     }
                 } else {
-                    System.out.println("file doesnt exists. removing entry...");
+                    Debugger.log("file doesnt exists. removing entry..."); // debug
                     openRecentMenu.getItems().remove(source);
                 }
             }
         };
         List<String> recent = UserDataManager.getRecentTemplates();
         if(recent != null) {
-//            System.out.println("Loading recent templates"); // debug
+//            Debugger.log("Loading recent templates"); // debug
             for(String path : recent) {
                 MenuItem recentMenu = new MenuItem(path);
                 recentMenu.setOnAction(recentHandler);
                 openRecentMenu.getItems().add(recentMenu);
             }
         } else {
-            System.out.println("No recent templates"); // debug
+            Debugger.log("No recent templates"); // debug
             MenuItem empty = new MenuItem("No recent files");
             empty.setDisable(true);
             openRecentMenu.getItems().add(empty);
@@ -422,6 +389,40 @@ public class Window  {
         
         menuBar.getMenus().add(fileMenu);
 
+        // EDIT MENU
+        Menu editMenu = new Menu("Edit");
+        
+        final MenuItem undoMenu = new MenuItem("Undo");
+        final MenuItem redoMenu = new MenuItem("Redo");
+        
+        
+        undoMenu.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN));
+        redoMenu.setAccelerator(new KeyCodeCombination(KeyCode.Y, KeyCombination.CONTROL_DOWN));
+        
+        EventHandler<ActionEvent> a = new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+                MenuItem source = (MenuItem) t.getSource();
+                if(tab != null) {
+                    CommandManager manager = tab.getCommandManager();
+                    if(source.equals(undoMenu)) {
+                        Debugger.log("undoing");
+                        manager.undoLast();
+                    } else {
+                        // redo
+                        Debugger.log("redoing");
+                        manager.redoLast();
+                    }
+                }
+            }
+        };
+        undoMenu.setOnAction(a);
+        redoMenu.setOnAction(a);
+        
+        editMenu.getItems().addAll(undoMenu, redoMenu);
+        menuBar.getMenus().add(editMenu);
+        
         // OUTPUT MENU
         Menu outputMenu = new Menu("Output");
         
@@ -522,7 +523,7 @@ public class Window  {
                     }
                     ABOUT_DIALOG.show();
                 } else if("a3 output".equalsIgnoreCase(action)) {
-//                    System.out.println("a3output " + a3outputMenu.isSelected()); // debug
+//                    Debugger.log("a3output " + a3outputMenu.isSelected()); // debug
                     CheckMenuItem checkMenuItem = (CheckMenuItem) event.getSource();
                     UserDataManager.setA3Output(checkMenuItem.isSelected());
                 } else if("jpg format".equalsIgnoreCase(action)) {
@@ -540,7 +541,7 @@ public class Window  {
     private void shutdown() {
         // TODO before shutdown actions
 //        System.exit(0); // not good
-        System.out.println("Bye...");
+        Debugger.log("Bye...");
         Platform.exit();
     }
     
@@ -559,7 +560,7 @@ public class Window  {
 //                    File imageFile = tab.getCertificateWrapper().getCertificateImage(); // null pointer
 //                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
 //                }
-//                System.out.println("tab selection changed");
+//                Debugger.log("tab selection changed");
 //            }
 //        });
 //        tabPane.setTabClosingPolicy(); // TODO tab close combobox reset
@@ -583,25 +584,25 @@ public class Window  {
 //        ObservableList<String> recentFiles = FXCollections.observableArrayList(UserDataManager.getRecentTemplates()); // null pointer
         // fetch recent files and add them to the combobox
         if(recent != null) {
-            System.out.println("Loading recent templates"); // debug
+            Debugger.log("Loading recent templates"); // debug
             recentTemplatesBox = new ComboBox(FXCollections.observableArrayList(recent));
         } else {
-            System.out.println("No recent templates"); // debug
+            Debugger.log("No recent templates"); // debug
             recentTemplatesBox = new ComboBox();
         }
 //        final ComboBox recentTemplatesBox = new ComboBox(getRecentTemplates()); // null pointer
         recentTemplatesBox.setOnAction(new EventHandler() {
             @Override
             public void handle(Event t) {
-                System.out.println("recent box selected"); // debug
+                Debugger.log("recent box selected"); // debug
                 File file = new File(((ComboBox)t.getSource()).getSelectionModel().getSelectedItem().toString());
-                System.out.println("File : " + file.getAbsolutePath()); // debug
+                Debugger.log("File : " + file.getAbsolutePath()); // debug
                 if(!isOpenedInGui(file))
                     if(file.exists()) {
                         openTemplateInGui(file);
                         tabPane.getSelectionModel().select(getTabIndex(file));
                     } else {
-                        System.out.println("file doesnt exists. removing entry...");
+                        Debugger.log("file doesnt exists. removing entry..."); // debug
                         ((ComboBox)t.getSource()).getItems().remove(file.getAbsolutePath());
                     }
                 else
@@ -613,7 +614,7 @@ public class Window  {
         recentTemplatesBox.getItems().addListener(new ListChangeListener() {
             @Override
             public void onChanged(ListChangeListener.Change change) {
-                System.out.println("recent items updated"); // debug
+                Debugger.log("recent items updated"); // debug
                 UserDataManager.setRecentTemplates(change.getList());
             }
         });
@@ -659,7 +660,7 @@ public class Window  {
         systemFonts.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-//                System.out.println("Changed");
+//                Debugger.log("Changed");
                 UserDataManager.setDefaultFontFamily(systemFonts.getSelectionModel().getSelectedItem().toString());
             }
         });
@@ -681,7 +682,7 @@ public class Window  {
         fontSizes.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-//                System.out.println("changed");
+//                Debugger.log("changed");
                 UserDataManager.setDefaultFontSize(fontSizes.getSelectionModel().getSelectedItem().toString());
             }
         });
@@ -705,7 +706,7 @@ public class Window  {
         fontStyles.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-//                System.out.println("changed");
+//                Debugger.log("changed");
                 UserDataManager.setDefaultFontStyle(fontStyles.getSelectionModel().getSelectedItem());
             }
         });
@@ -868,7 +869,7 @@ public class Window  {
                 tab.setFile(file); // TODO change filepath to tabs
                 if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
             } else {
-                System.out.println("Saving file : " + tab.getFile().getAbsolutePath()); // DEBUG
+                Debugger.log("Saving file : " + tab.getFile().getAbsolutePath()); // DEBUG
                 certificateUtils.saveFileAtTab(tab, tab.getFile());
             }
         } else {
@@ -923,13 +924,13 @@ public class Window  {
         File file = null;
         if(dialog_type == DIALOG_TYPE.OPEN) {
             file = fileChooser.showOpenDialog(stage);
-//            System.out.println("opening file by dialog"); // debug
+//            Debugger.log("opening file by dialog"); // debug
         } else if(dialog_type == DIALOG_TYPE.SAVE) {
-//            System.out.println("saving file by dialog"); // debug
+//            Debugger.log("saving file by dialog"); // debug
             file = fileChooser.showSaveDialog(stage);
-//            System.out.println("previois path : " + file.getAbsolutePath()); // debug
+//            Debugger.log("previois path : " + file.getAbsolutePath()); // debug
             file = certificateUtils.correctXmlExtension(file);
-//            System.out.println("current path : " + file.getAbsolutePath()); // debug
+//            Debugger.log("current path : " + file.getAbsolutePath()); // debug
         }
         return file;
     }
@@ -948,16 +949,14 @@ public class Window  {
             UserDataManager.setCertificateFilePath(file); // TODO broken, no usage yet
             return tab;
         } catch (UnmarshalException ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
             Alert.showAlertError(PRIMARY_STAGE, "Error", "The specified file is not recognized as a template file. Please try another one.");            
         } catch (NullPointerException ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
             Alert.showAlertError(PRIMARY_STAGE, "Error", "There seems to be a problem with the template xml file.\nEither it was used by an older version of Certificate Maker or it is not a template file.");
         }catch (OutOfMemoryError ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
             Alert.showAlertError(PRIMARY_STAGE, "Error", "The image file size is too much");
         } catch (Exception ex) {
-            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex); // java.util.logging
+            logger.error("Something's wrong", ex);
             Alert.showAlertError(PRIMARY_STAGE, "Error", ex.toString());
         }
         return null;
@@ -1008,7 +1007,7 @@ public class Window  {
 //            LOADINGBOX.showProgressing(CREATECERTIFICATE_DIALOG.populatingProgressProperty());
             CREATECERTIFICATE_DIALOG.openFor(wrapper);
         } else {
-            System.out.println("unknown condition : tab index out of bounds"); // debug
+            Debugger.log("unknown condition : tab index out of bounds"); // debug
             Alert.showAlertError(PRIMARY_STAGE, "Error", "No opened templates");
         }
     }

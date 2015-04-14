@@ -51,7 +51,7 @@ public class CoverStage extends Stage {
         scene.getWindow().setEventDispatcher(new EventDispatcher() {
             @Override
             public Event dispatchEvent(Event event, EventDispatchChain edc) {
-                if(event.getEventType() == RedirectedEvent.REDIRECTED) System.out.println("about dialog just recieved a redirected event..."); // stupid debug
+                if(event.getEventType() == RedirectedEvent.REDIRECTED) Debugger.log("about dialog just recieved a redirected event..."); // stupid debug
                 if(event.getEventType() == MouseEvent.MOUSE_PRESSED) {
                     hide();
                 }

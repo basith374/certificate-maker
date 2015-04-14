@@ -53,7 +53,7 @@ public class UserDataManager {
     public static void setCertificateFilePath(File file) {
         if (file != null) {
             prefs.put("filePath", file.getPath());
-            System.out.println("Saving file path for current tab : " + file.getPath()); // debug
+            Debugger.log("Saving file path for current tab : " + file.getPath()); // debug
             // TODO update title
         } else {
             prefs.remove("filePath");
@@ -83,9 +83,9 @@ public class UserDataManager {
 //            if (file.isDirectory()) {
 //                prefs.put("lastActivityPath", file.getAbsolutePath());
 //            }
-//            System.out.println("seperator : " + File.separator + ", seperatorchar : " + File.separatorChar);
+//            Debugger.log("seperator : " + File.separator + ", seperatorchar : " + File.separatorChar);
             String path = file.getAbsolutePath().substring(0, file.getAbsolutePath().lastIndexOf(File.separatorChar));
-//            System.out.println("saving activity path :" +path);
+//            Debugger.log("saving activity path :" +path);
             prefs.put("lastActivityPath", path);
         }
     }
@@ -259,7 +259,7 @@ public class UserDataManager {
     
     public static void setDefaultImageFormat(String format) {
         if("jpg".equalsIgnoreCase(format) || "png".equalsIgnoreCase(format)) {
-            System.out.println("DEFAULT IMAGE EXTENSION : " + format); // debug
+            Debugger.log("DEFAULT IMAGE EXTENSION : " + format); // debug
             prefs.put("imageFormat", format);
         }
     }

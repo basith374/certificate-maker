@@ -90,11 +90,11 @@ public class CertificateUtils {
 //        if(field.getFieldType() == FieldType.TEXT) field.setFieldName(text.getText());
 //        if(field.getFieldType() == FieldType.COURSE) field.setCourses(text.getCertificateField().getCourses()); // new fix , not sure about it. LIFE SAVER! BIG BUG KILLER!
 //        if(field.getFieldType() == FieldType.COURSE) { // debug
-//            System.out.println("converting to certificatefield :\nCourses : ");
+//            Debugger.log("converting to certificatefield :\nCourses : ");
 //            for(String s : field.getCourses()) {
 //                System.out.print(s + ", ");
 //            }
-//            System.out.println("");
+//            Debugger.log("");
 //        }
 //        field.setFontFamily(fontFamily);
 //        field.setFontSize(fontSize);
@@ -160,12 +160,12 @@ public class CertificateUtils {
         CertificateWrapper certificateWrapper = new CertificateWrapper();
         certificateWrapper.setName(name); // used as tab name and save name
         certificateWrapper.setCertificateImage(new File(imagePath));
-        List<CertificateField> fields = new ArrayList<>();
+        ArrayList<CertificateField> fields = new ArrayList<>();
 //        ObservableList<CertificateField> fields = FXCollections.observableArrayList();
 //        fields.addListener(new ListChangeListener<CertificateField>() {
 //            @Override
 //            public void onChanged(ListChangeListener.Change<? extends CertificateField> change) {
-//                System.out.println("wrapper list changed : current size " + change.getList().size());
+//                Debugger.log("wrapper list changed : current size " + change.getList().size());
 //            }
 //        });
         certificateWrapper.setCertificateFields(fields);
@@ -182,10 +182,10 @@ public class CertificateUtils {
 //        ScrollPane scrollPane = (ScrollPane) tab.getContent();
 //        Group group = (Group) scrollPane.getContent();
         CertificateWrapper wrapper = tab.getUpdatedWrapper();
-        System.out.println("retrieving wrapper : total contents " + wrapper.getCertificateFields().size());
+        Debugger.log("retrieving wrapper : total contents " + wrapper.getCertificateFields().size());
 //        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
 //        wrapper.setCertificateFields(certificateFieldList);
-//        System.out.println("populated wrapper :\n" + wrapper); // very helpful debug
+//        Debugger.log("populated wrapper :\n" + wrapper); // very helpful debug
         createCertificateFile(file, wrapper);
 //        tab.setFile(file); // done at an upper level
         UserDataManager.setLastActivityPath(file);
@@ -207,7 +207,7 @@ public class CertificateUtils {
                 if (file.exists()) {
                     wrapper = (CertificateWrapper) um.unmarshal(file);
                 }
-                System.out.println("Unmarshalling...\n" + wrapper); // IMPORTANT debug
+                Debugger.log("Unmarshalling...\n" + wrapper); // IMPORTANT debug
             } catch (JAXBException e) {
                 e.printStackTrace();
             }
@@ -256,7 +256,7 @@ public class CertificateUtils {
             if(!path.endsWith(".xml")) {
     //            System.out.print("correcting file extension... , previous path : "+ path ); // debug
                 path = path.concat(".xml");
-    //            System.out.println(" , corrected path : " + path); // debug
+    //            Debugger.log(" , corrected path : " + path); // debug
             }
             return new File(path);
         } else return null; // new null pointer fix

@@ -42,19 +42,32 @@ import javafx.scene.text.Text;
  */
 public final class CertificateText extends Text {
     
+    // these values are binded to the observer
     private ReadOnlyObjectWrapper<FieldType> fieldType;
     private ReadOnlyBooleanWrapper repeatin;
     private ObservableList<String> array;
+    // the actual field that gets saved in the wrapper
+    private CertificateField observer;
+    
+    public void setObserver(CertificateField observer) {
+        this.observer = observer;
+    }
+
+    public CertificateField getObserver() {
+        return observer;
+    }
+    
     
     public CertificateText(CertificateField field) {
         this.setX(field.getX());
         this.setY(field.getY());
+//        Debugger.log("adding text : " + field.getX() + "," + field.getY()); // debug
         FontWeight fw = FontWeight.findByName(field.getFontStyle());
         this.setFont(Font.font(field.getFontFamily(), fw, field.getFontSize()));
         
         if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) setText(field.getFieldName());
         else setText(field.getFieldType().toString());
-//            System.out.println("Text : " + certificateField.getFieldType().toString()); // debug
+//            Debugger.log("Text : " + certificateField.getFieldType().toString()); // debug
         
         fieldType = new ReadOnlyObjectWrapper(field.getFieldType());
         if(field.getFieldType() == FieldType.TEXT) repeatin = new ReadOnlyBooleanWrapper(field.isRepeating());

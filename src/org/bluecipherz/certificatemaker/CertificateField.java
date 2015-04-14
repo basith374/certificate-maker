@@ -41,8 +41,15 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * @author bazi
  */
 @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
-public class CertificateField {
+public class CertificateField implements Comparable {
 
+    public static final int DATE = 1;
+    public static final int REGNO = 2;
+    public static final int TEXTREPEATING = 3;
+    public static final int TEXT = 4;
+    public static final int ARRAY = 5;
+    public static final int IMAGE = 6;
+    
     private int x;
     private int y;
     private FieldType fieldType;
@@ -170,24 +177,24 @@ public class CertificateField {
     
     public void observe(final Node node) {
         if(node instanceof CertificateText) {
-            CertificateText text = (CertificateText) node;
+            final CertificateText text = (CertificateText) node;
+            text.setObserver(this); // backreference
             text.parentProperty().addListener(new ChangeListener<Parent>() {
                 @Override
                 public void changed(ObservableValue<? extends Parent> ov, Parent t, Parent t1) {
                     if(t1 == null) parent.remove(this);
-//                    System.out.println("field removed, wrapper contents:" + parent.size());
+//                    Debugger.log("field removed, wrapper contents:" + parent.size());
                     changed.set(true);
                 }
             });
-            text.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
+            text.layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
                 @Override
                 public void changed(ObservableValue<? extends Bounds> ov, Bounds oldBounds, Bounds newBounds) {
-                    int x = (int) (newBounds.getMinX() + (newBounds.getMaxX() - newBounds.getMinX()) / 2);
-//                    int y = (int) (newBounds.getMinY() + newBounds.getMaxY() / 2);
-                    int y = (int) (newBounds.getMinY() + (newBounds.getMaxY() - newBounds.getMinY()) / 2);
+                    int x = (int) (text.getX() + newBounds.getWidth() / 2);
+                    int y = (int) text.getY();
                     setX(x);
                     setY(y);
-//                    System.out.println("coords :" + x + "," + y);
+//                    Debugger.log("coords : " + x + "," + y);
                     changed.set(true);
                 }
             });
@@ -227,12 +234,12 @@ public class CertificateField {
                 }
             });
         } else if(node instanceof ImageView) {
-            ImageView imageView = (ImageView) node;
-            imageView.boundsInLocalProperty().addListener(new ChangeListener<Bounds>() {
+            final ImageView imageView = (ImageView) node;
+            imageView.layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
                 @Override
                 public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds newBounds) {
-                    setX((int) newBounds.getMinX());
-                    setY((int) newBounds.getMinY());
+                    setX((int) imageView.getX());
+                    setY((int) imageView.getY());
                     changed.set(true);
                 }
             });
@@ -263,14 +270,37 @@ public class CertificateField {
                             output = output.concat(element+",");
                         }
                     } else {
-                        System.out.println("array is empty"); // debug
+                        Debugger.log("array is empty"); // debug
                     }
                 } else {
-                    System.out.println("array has become null."); // debug
+                    Debugger.log("array has become null."); // debug
                 }
             }
         }
         return output.concat("}\n");
+    }
+
+    /**
+     * Used for comparing
+     * @return 
+     */
+    public int getOrderIndex() {
+        if(fieldType == FieldType.DATE) return DATE;
+        if(fieldType == FieldType.REGNO) return REGNO;
+        if(fieldType == FieldType.TEXT)
+            if(repeating) return TEXTREPEATING; else return TEXT;
+        if(fieldType == FieldType.ARRAY) return ARRAY;
+        if(fieldType == FieldType.IMAGE) return IMAGE;
+        return 0; // if nothing matches(WHICH IS QUITE IMPOSSIBLE, unless something new is added to FieldType enum)
+    }
+    
+    @Override
+    public int compareTo(Object o) {
+        if(o instanceof CertificateField) {
+            CertificateField field = (CertificateField) o;
+            return this.getOrderIndex() - field.getOrderIndex(); // ascending order
+//            return field.getOrderIndex() - this.getOrderIndex(); // descending order
+        } else throw new IllegalArgumentException("Parameter must be CertificateField...");
     }
     
 }

@@ -156,13 +156,13 @@ public class ImageWriterService {
             @Override
             protected Void call() throws Exception {
                 try (FileOutputStream fos = new FileOutputStream(saveFile); ImageOutputStream ios = ImageIO.createImageOutputStream(fos)) {
-                    System.out.println("image writers format " + defaultExtension); // debug
+                    Debugger.log("image writers format " + defaultExtension); // debug
                     Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(defaultExtension);
                     ImageWriter writer = writers.next(); 
                     // lossless compression
 //                    ImageWriteParam iwp = writer.getDefaultWriteParam();
 //                    if("jpg".equalsIgnoreCase(defaultExtension)) {
-//                        System.out.println("JPEG Lossless compression...");
+//                        Debugger.log("JPEG Lossless compression...");
 //                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
 //                        iwp.setCompressionType("JPEG-LS");
 //                    }
@@ -179,7 +179,7 @@ public class ImageWriterService {
                     });
                     writer.write(bufferedImage);
 //                    writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
-                    System.out.println("disposing write sequence");
+                    Debugger.log("disposing write sequence");
                     writer.dispose();
                 }
                 return null;
@@ -202,20 +202,20 @@ public class ImageWriterService {
     }
     
     public void takeImageWriteOrder(ImageWriteOrder order) throws FileNotFoundException, IOException, OutOfMemoryError {
-        System.out.println("IMAGE WRITE SERVICE : default image extension " + defaultExtension); // debug
+        Debugger.log("IMAGE WRITE SERVICE : default image extension " + defaultExtension); // debug
         if(a3output) {
             if(queue == null) {
                 queue = order;
                 statusLabel.setText("Added to queue");
-                System.out.println("IMAGE WRITER SERVICE : added order to queue"); // debug
+                Debugger.log("IMAGE WRITER SERVICE : added order to queue"); // debug
                 // TODO status message : ADDED TO QUEUE
             } else {
-                if(certificateImage == null) System.out.println("Shit rain!"); // debug
+                if(certificateImage == null) Debugger.log("Shit rain!"); // debug
                 BufferedImage img1 = ImageUtils.createBufferedImage(certificateImage, queue.fields);
                 BufferedImage img2 = ImageUtils.createBufferedImage(certificateImage, order.fields);
-                System.out.println("created two buffered images..."); // debug
+                Debugger.log("created two buffered images..."); // debug
                 BufferedImage combined = ImageUtils.combineImages(img1, img2);
-                System.out.println("combined two images");
+                Debugger.log("combined two images");
                 /* a lil messy below */
                 String combinedName = queue.saveName + order.saveName; // TODO save name for combined image
                 File saveFile = new File(queue.savePath + File.separatorChar + combinedName); // assuming both are to saved in same location

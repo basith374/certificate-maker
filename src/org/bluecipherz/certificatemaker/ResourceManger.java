@@ -33,6 +33,8 @@ public class ResourceManger {
         LARGE
     }
     
+    public Image crossx1;
+    
     public Image addimgx32;
     public Image addx32;
     public Image delx32;
@@ -108,6 +110,8 @@ public class ResourceManger {
         this.warnx16 = new Image(getClass().getResourceAsStream("icons/warnx16.png"));
         this.warnx32 = new Image(getClass().getResourceAsStream("icons/warnx32.png"));
         this.warnx48 = new Image(getClass().getResourceAsStream("icons/warnx48.png"));
+        
+        this.crossx1 = new Image(getClass().getResourceAsStream("icons/crossx1.png"));
     }
     
     public void loadSplashResource() {

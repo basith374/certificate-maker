@@ -37,7 +37,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 @XmlRootElement(name="certificatewrapper")
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class CertificateWrapper implements Cloneable {
-    private List<CertificateField> certificateFields;
+    private ArrayList<CertificateField> certificateFields;
     private String name;
     private File certificateImage;
 
@@ -73,11 +73,11 @@ public class CertificateWrapper implements Cloneable {
 //    @XmlJavaTypeAdapter(CertificateFieldAdapter.class)
 //    @XmlJavaTypeAdapter(CertificateFieldMapAdapter.class)
     @XmlElement(name = "certificatefield")
-    public List<CertificateField> getCertificateFields() {
+    public ArrayList<CertificateField> getCertificateFields() {
         return certificateFields;
     }
 
-    public void setCertificateFields(List<CertificateField> certificateFields) {
+    public void setCertificateFields(ArrayList<CertificateField> certificateFields) {
         this.certificateFields = certificateFields;
     }
 
@@ -85,7 +85,7 @@ public class CertificateWrapper implements Cloneable {
     public boolean equals(Object obj) {
         if(obj instanceof CertificateWrapper) {
             CertificateWrapper wrapper = (CertificateWrapper) obj;
-//            System.out.println("wrapper fields : " + certificateFields.size() + ", targetfields : " + wrapper.getCertificateFields().size()); // debug
+//            Debugger.log("wrapper fields : " + certificateFields.size() + ", targetfields : " + wrapper.getCertificateFields().size()); // debug
             if(wrapper.name == null ? this.name != null : !wrapper.name.equals(this.name)) return false;
             if(!wrapper.certificateImage.equals(this.certificateImage)) return false;
             if(wrapper.getCertificateFields().size() != certificateFields.size()) return false;        

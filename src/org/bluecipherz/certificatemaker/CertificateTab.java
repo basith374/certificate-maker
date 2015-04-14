@@ -18,6 +18,8 @@
 package org.bluecipherz.certificatemaker;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -28,6 +30,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -35,6 +38,7 @@ import javafx.event.EventType;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
 import javafx.scene.image.Image;
@@ -69,6 +73,12 @@ public final class CertificateTab extends Tab {
     private ObservableList<CertificateField> fields;
     private ReadOnlyStringWrapper name;
     private ReadOnlyObjectWrapper<File> certificateImage;
+    
+    private CommandManager commandManager = new CommandManager();
+    
+    public CommandManager getCommandManager() {
+        return commandManager;
+    }
 
     public ObservableList<CertificateField> getFields() {
         return fields;
@@ -98,6 +108,12 @@ public final class CertificateTab extends Tab {
 
     public CertificateTab(CertificateWrapper wrapper) {
         fields = FXCollections.observableArrayList(wrapper.getCertificateFields());
+        fields.addListener(new ListChangeListener<CertificateField>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends CertificateField> change) {
+                Debugger.log("no of fields changed : " + fields.size());
+            }
+        });
         name = new ReadOnlyStringWrapper();
         name.addListener(new ChangeListener<String>() {
             @Override
@@ -111,6 +127,26 @@ public final class CertificateTab extends Tab {
         scrollPane = new ScrollPane();
         scrollPane.setPannable(true);
         fieldContainer = new Group();
+        fieldContainer.getChildren().addListener(new ListChangeListener<Node>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Node> change) {
+//                Debugger.log("field container changed, total contents :" + (fieldContainer.getChildren().size() - 1));
+//                if(change.wasAdded()) { // something added 
+//                    for(Node node : change.getAddedSubList()) {
+//                        if(node instanceof CertificateText) {
+//                            CertificateText text = (CertificateText) node;
+//                            if(text.getObserver() == null) Debugger.log("Illegal field container addition...");
+//                        } else { // imageview
+//                            
+//                        }
+//                    }
+//                } else if(change.wasRemoved()) { // something removed
+//                    for(Node node : change.getRemoved()) {
+//                        
+//                    }
+//                }
+            }
+        });
         
         imageView = new ImageView();
         
@@ -121,7 +157,7 @@ public final class CertificateTab extends Tab {
         changed.addListener(new ChangeListener<Boolean>() {
             @Override
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                System.out.println("file changed :s" + t1);
+                Debugger.log("file changed :s" + t1);
             }
         });
         
@@ -166,7 +202,10 @@ public final class CertificateTab extends Tab {
 
     public CertificateWrapper getUpdatedWrapper() {
         CertificateWrapper wrapper = new CertificateWrapper();
-        wrapper.setCertificateFields(fields);
+//        List<CertificateField> _fields = fields;
+//        wrapper.setCertificateFields(_fields);
+        ArrayList<CertificateField> _fields = new ArrayList<>(fields);
+        wrapper.setCertificateFields(_fields);
         wrapper.setCertificateImage(getCertificateImage());
         wrapper.setName(getName());
         return wrapper;
@@ -266,7 +305,7 @@ public final class CertificateTab extends Tab {
             double initialComponentY;
             @Override
             public void handle(MouseEvent event) {
-                System.out.println("clicked : x" + event.getX() + ", y" + event.getY());
+                Debugger.log("clicked : x" + event.getX() + ", y" + event.getY());
                 EventType<? extends Event> eventType = event.getEventType();
                 MouseButton button = event.getButton();
                 ImageView imageView = (ImageView) event.getSource();
@@ -278,14 +317,17 @@ public final class CertificateTab extends Tab {
                             initialComponentY = imageView.getY();
                             initialEventX = event.getX();
                             initialEventY = event.getY();
-    //                        System.out.println("Mode : move"); // debug
+    //                        Debugger.log("Mode : move"); // debug
                         } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-                            Group parent = (Group) imageView.getParent();
-                            parent.getChildren().remove(imageView);
+//                            Group parent = (Group) imageView.getParent();
+//                            parent.getChildren().remove(imageView);
+                            // new command pattern
+                            DeleteCommand command = new DeleteCommand(imageView);
+                            commandManager.addAndExecute(command);
                             setAvatarFieldAdded(false);
-    //                        System.out.println("Mode : delete"); // debug
+    //                        Debugger.log("Mode : delete"); // debug
                         } else if(Window.getMouseMode() == Window.MODE_EDIT) {
-                            System.out.println("Editing image"); // debug
+                            Debugger.log("Editing image"); // debug
                             WINDOW.showEditAvatarDialog(CertificateTab.this, imageView);
                         }
                     }
@@ -296,8 +338,11 @@ public final class CertificateTab extends Tab {
                             double currentY = event.getY();
                             double x = currentX - initialEventX + initialComponentX;
                             double y = currentY - initialEventY + initialComponentY;
-                            imageView.setX(x);
-                            imageView.setY(y);
+//                            imageView.setX(x);
+//                            imageView.setY(y);
+//                            // new command pattern
+                            MoveCommand command = new MoveCommand(imageView, new Point2D(initialComponentX, initialComponentY),new Point2D(x, y));
+                            commandManager.addAndExecute(command);
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
@@ -336,9 +381,14 @@ public final class CertificateTab extends Tab {
                             initialEventX = event.getX();
                             initialEventY = event.getY();
                         } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-                            Group parent = (Group) text.getParent();
-                            parent.getChildren().remove(text);
-                            System.out.println("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
+//                            Group parent = (Group) text.getParent();
+//                            parent.getChildren().remove(text);
+                            // new command pattern
+                            DeleteCommand command = new DeleteCommand(text);
+                            commandManager.addAndExecute(command);
+                            //
+//                            Group parent = (Group) text.getParent();
+//                            Debugger.log("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
                             FieldType type = text.fieldTypeProperty().get();
                             if(type == FieldType.DATE) setDateFieldAdded(false);
                             if(type == FieldType.REGNO) setRegnoFieldAdded(false);
@@ -366,8 +416,11 @@ public final class CertificateTab extends Tab {
                             double currentY = event.getY();
                             double x = currentX - initialEventX + initialComponentX;
                             double y = currentY - initialEventY + initialComponentY;
-                            text.setX(x);
-                            text.setY(y);
+//                            text.setX(x);
+//                            text.setY(y);
+                            // new command pattern
+                            MoveCommand command = new MoveCommand(text, new Point2D(initialComponentX, initialComponentY), new Point2D(x, y));
+                            commandManager.addAndExecute(command);
                         }
                     }
                 }
@@ -397,7 +450,7 @@ public final class CertificateTab extends Tab {
                     initialX = event.getX();
                     initialY = event.getY();
                     if(button == MouseButton.PRIMARY) {
-                        System.out.println("clicked : x" + event.getX() + ", y" + event.getY() + ", " + type.toString()); // debug
+                        Debugger.log("clicked : x" + event.getX() + ", y" + event.getY() + ", " + type.toString()); // debug
                         if(getMouseMode() == Window.MODE_ADD) {
                             WINDOW.showNewFieldDialog(CertificateTab.this, new Point2D(event.getX(), event.getY()));
                         } else if(getMouseMode() == Window.MODE_ADDIMAGE) { // remove this if if you want selection lines on all modes
@@ -459,10 +512,10 @@ public final class CertificateTab extends Tab {
                         if(getMouseMode() == Window.MODE_ADDIMAGE) {
                             if(!isAvatarFieldAdded()) {
                                 if(initialX == event.getX() && initialY == event.getY()) {
-                                    System.out.println("clicked, showing avatar dialog"); // debug
+                                    Debugger.log("clicked, showing avatar dialog"); // debug
                                     WINDOW.showAvatarAddDialog(CertificateTab.this, new Point2D(event.getX(), event.getY()));
                                 } else {
-                                    System.out.println("released, calculating avatar size"); // debug
+                                    Debugger.log("released, calculating avatar size"); // debug
                                     WINDOW.addAvatar(CertificateTab.this, new Point2D(initialX, initialY), new Point2D(event.getX(), event.getY()));
                                 }
                             } else {
@@ -485,6 +538,10 @@ public final class CertificateTab extends Tab {
         };
     }
 
+    public void addNewText(CertificateText text, CertificateField field) {
+        addText(text, field);
+        fields.add(field);
+    }
     
     public void addText(CertificateText text, CertificateField field) {
         fieldContainer.getChildren().add(text);
@@ -495,7 +552,12 @@ public final class CertificateTab extends Tab {
                 if(t1) setChanged(true);
             }
         });
-        System.out.println("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
+//        Debugger.log("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
+    }
+    
+    public void addNewImage(ImageView image, CertificateField field) {
+        addImage(image, field);
+        fields.add(field);
     }
     
     public void addImage(ImageView image, CertificateField field) {
@@ -507,7 +569,7 @@ public final class CertificateTab extends Tab {
                 if(t1) setChanged(true);
             }
         });
-        System.out.println("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
+//        Debugger.log("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
     }
     
     /**
@@ -518,6 +580,7 @@ public final class CertificateTab extends Tab {
      */
     public CertificateText createText(final CertificateField field) {
         CertificateText text = new CertificateText(field);
+        text.setX(text.getX() - text.getLayoutBounds().getWidth() / 2); // alignment
         // listeners
         EventHandler<MouseEvent> mouseHandler = getTextMouseHandler();
         text.setOnMousePressed(mouseHandler);
@@ -530,11 +593,11 @@ public final class CertificateTab extends Tab {
 
     public ImageView createAvatarImage(final CertificateField field) {
         Image image = createImage(field.getWidth(), field.getHeight());
-//        System.out.println("image dimensions : " + width + "x" + height); // debug
+//        Debugger.log("image dimensions : " + width + "x" + height); // debug
         ImageView imageView = new ImageView(image);
         imageView.setX(field.getX());
         imageView.setY(field.getY());
-//        System.out.println("image coords : x" + x + " y" + y); // debug
+//        Debugger.log("image coords : x" + x + " y" + y); // debug
         EventHandler<MouseEvent> mouseHandler = getAvatarMouseHandler();
         imageView.setOnMousePressed(mouseHandler);
         imageView.setOnMouseDragged(mouseHandler);

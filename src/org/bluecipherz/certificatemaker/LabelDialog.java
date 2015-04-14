@@ -77,9 +77,9 @@ class LabelDialog extends Stage {
     private final Button button;
     private int newX;
     private int newY;
-    private final ComboBox fontFamilyBox;
-    private final ComboBox fontSizeBox;
-    private final ComboBox fontStyleBox;
+    private final ComboBox<String> fontFamilyBox;
+    private final ComboBox<Integer> fontSizeBox;
+    private final ComboBox<String> fontStyleBox;
     private final Window window;
     
     private static final ObservableList<FieldType> fieldTypes = FXCollections.observableArrayList(
@@ -109,7 +109,7 @@ class LabelDialog extends Stage {
                 listView.getSelectionModel().selectLast();
                 animation.play();
             } else if(b.equals(removeButton)) {
-                System.out.println("removing" + listView.getSelectionModel().getSelectedItem());
+                Debugger.log("removing" + listView.getSelectionModel().getSelectedItem());
                 listView.getItems().remove(listView.getSelectionModel().getSelectedItem());
             }
         }
@@ -158,10 +158,10 @@ class LabelDialog extends Stage {
                 CertificateField field = generateCertificateField(newX, newY);
                 subjectText = tab.createText(field); // generate new text
                 
-//                System.out.println("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
+//                Debugger.log("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
                 if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) {
                     if(!"".equalsIgnoreCase(subjectText.getText())) {
-                        tab.addText(subjectText, field);
+                        tab.addNewText(subjectText, field);
                         close();
                     }
                     else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
@@ -170,7 +170,7 @@ class LabelDialog extends Stage {
                     if(field.getFieldType() == FieldType.DATE) if(tab.isDateFieldAdded()) entryisvalid = false;
                     if(field.getFieldType() == FieldType.REGNO) if(tab.isRegnoFieldAdded()) entryisvalid = false;
                     if(entryisvalid) {
-                        tab.addText(subjectText, field);
+                        tab.addNewText(subjectText, field);
                         // disallow multiple fields(single type)
                         if(disallowmultiplefields) {
                             if(field.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
@@ -411,8 +411,9 @@ class LabelDialog extends Stage {
         fieldTypeBox.getSelectionModel().select(TYPE);
         
         fontFamilyBox.getSelectionModel().select(subjectText.getFont().getFamily()); // new 
-        System.out.println("" + (int) subjectText.getFont().getSize()); // debug
-        fontSizeBox.getSelectionModel().select((int)subjectText.getFont().getSize()); // avoid decimal, cast to int
+//        Debugger.log("" + (int) subjectText.getFont().getSize()); // debug
+        int size = (int) subjectText.getFont().getSize();
+        fontSizeBox.getSelectionModel().select(new Integer(size)); // avoid decimal, cast to int
         fontStyleBox.getSelectionModel().select(subjectText.getFont().getStyle());
         
         if(TYPE == FieldType.TEXT) {

@@ -108,7 +108,7 @@ class NewTemplateDialog extends Stage {
                 } else {
                     Alert.showAlertError(owner, "Error", "Please give a valid filename and image location");
                     // TODO error message
-                    System.out.println("please give a filename and image location...");
+                    Debugger.log("please give a filename and image location...");
                 }
             }
         });

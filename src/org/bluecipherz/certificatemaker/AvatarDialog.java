@@ -56,7 +56,6 @@ public class AvatarDialog extends Stage {
     
     private final TextField heightField;
     private final TextField widthField;
-    private boolean disallowmultipleimages = !UserDataManager.isMultipleFieldsAllowed();
     
     private Button okButton;
     
@@ -72,7 +71,7 @@ public class AvatarDialog extends Stage {
                     if(width > 0 && height > 0) {
                         CertificateField field = generateCertificateField(imageX, imageY, width, height);
                         ImageView image = tab.createAvatarImage(field);
-                        tab.addImage(image, field);
+                        tab.addNewImage(image, field);
                         tab.setAvatarFieldAdded(true);
                         close();
                     } // else give positive number
@@ -193,13 +192,12 @@ public class AvatarDialog extends Stage {
     public void newImage(Point2D point, int width, int height) {
         imageX = (int) point.getX();
         imageY = (int) point.getY();
-        System.out.println("adding image : x" + imageX + ", y" + imageY + ", widht" + width + ", height" + height);
+        Debugger.log("adding image : x" + imageX + ", y" + imageY + ", widht" + width + ", height" + height);
 //        if(!imageHolder.isAvatarFieldAdded()) { // done at an upper level
             CertificateField field = generateCertificateField(imageX, imageY, width, height);
             ImageView image = tab.createAvatarImage(field);
-            tab.addImage(image, field);
-            if(disallowmultipleimages)
-                tab.setAvatarFieldAdded(true);
+            tab.addNewImage(image, field);
+            tab.setAvatarFieldAdded(true);
 //        }
     }
     

@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -177,7 +178,7 @@ class CreateCertificateDialog extends Stage {
             populatingProgress.addListener(new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> ov, Number t, Number loaded) {
-                    System.out.println("Populating " + loaded.doubleValue() * 100 + "%");
+                    Debugger.log("Populating " + loaded.doubleValue() * 100 + "%");
                 }
             });
         } else {
@@ -225,17 +226,18 @@ class CreateCertificateDialog extends Stage {
 //        ArrayList<CertificateField> certificateFields = orderFields(wrapper.getCertificateFields());
         
         /* start populating gui components according to wrapper*/
-        System.out.println("Populating fields");
-        Node previousNode;
+        Debugger.log("Populating fields");
+        Collections.sort(wrapper.getCertificateFields()); // new sorting implementation
+        Debugger.log("Sorting box components");
         for (CertificateField certificateField : wrapper.getCertificateFields()) {
             Label label;
             if(certificateField.getFieldType() == FieldType.TEXT || certificateField.getFieldType() == FieldType.ARRAY) {
                 label = new Label(certificateField.getFieldName() + " : ");
-                System.out.println("Adding TEXT : " + certificateField.getFieldName()); // debug
+                Debugger.log("Adding TEXT : " + certificateField.getFieldName());
             } else {
                 label = new Label(certificateField.getFieldType().getName() + " : "); // new enum implementation
 //                label = new Label(certificateField.getFieldType().toString() + " : ");
-                System.out.println("Adding " + certificateField.getFieldType().toString()); // debug
+                Debugger.log("Adding " + certificateField.getFieldType().toString());
             }
             gridPane.add(label, 0, row);
             
@@ -246,16 +248,18 @@ class CreateCertificateDialog extends Stage {
                 dataHolders.add(avatarPathField); // save a copy for printing later
                 Button browseButton = getBrowseButton();
                 gridPane.add(browseButton, 2, row);
+                Debugger.log("Adding avatar path field for image at : " + certificateField.getX() + "," + certificateField.getY()); // debug
             } else if(certificateField.getFieldType() == FieldType.ARRAY) {
-//                System.out.println("Loading courses : " + certificateField.getCourses().size()); // debug
+//                Debugger.log("Loading courses : " + certificateField.getCourses().size()); // debug
                 ObservableList<String> list = FXCollections.observableArrayList(certificateField.getArray());
                 ComboBox<String> box = new ComboBox(list);
-                box.setMinWidth(FIELD_WIDTH);
+//                box.setMinWidth(FIELD_WIDTH);
+                box.setMaxWidth(Double.MAX_VALUE);
 //                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
                 // USEFUL DEBUG INFO
-//                System.out.println("combobox layout width " + box.getLayoutBounds().getWidth() + ", layout height " + box.getLayoutBounds().getHeight()); // debug
-//                System.out.println("combobox boundsinlocal width " + box.getBoundsInLocal().getWidth() + ", boundsinlocal height " + box.getBoundsInLocal().getHeight()); // debug                
-//                System.out.println("combobox boundsinparent width " + box.getBoundsInParent().getWidth() + ", boundsinparent height " + box.getBoundsInParent().getHeight()); // debug                
+//                Debugger.log("combobox layout width " + box.getLayoutBounds().getWidth() + ", layout height " + box.getLayoutBounds().getHeight()); // debug
+//                Debugger.log("combobox boundsinlocal width " + box.getBoundsInLocal().getWidth() + ", boundsinlocal height " + box.getBoundsInLocal().getHeight()); // debug                
+//                Debugger.log("combobox boundsinparent width " + box.getBoundsInParent().getWidth() + ", boundsinparent height " + box.getBoundsInParent().getHeight()); // debug                
                 // END
 //                box.setOnAction(getComboActionTraverse()); // TODO action traverse
 //                box.setOnKeyPressed(actionTraverse); // doesnt work
@@ -266,15 +270,23 @@ class CreateCertificateDialog extends Stage {
                 box.getSelectionModel().select(0);
             } else if(certificateField.getFieldType() == FieldType.TEXT){
 //                TextField textField = new TextField();
-                ComboBox<String> box = new ComboBox<>();
-                box.setMinWidth(FIELD_WIDTH);
-//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
-                box.setEditable(true);
-                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
-//                box.setOnAction(actionComboTraverse); // not good
-//                box.setOnKeyPressed(actionTraverse); // doesnt work
-                gridPane.add(box, 1, row);
-                dataHolders.add(box); // save a copy for printing later
+                if(!certificateField.isRepeating()) {
+                    ComboBox<String> box = new ComboBox<>();
+//                    box.setMinWidth(FIELD_WIDTH);
+                    box.setMaxWidth(Double.MAX_VALUE);
+    //                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
+                    box.setEditable(true);
+                    box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
+    //                box.setOnAction(actionComboTraverse); // not good
+    //                box.setOnKeyPressed(actionTraverse); // doesnt work
+                    gridPane.add(box, 1, row);
+                    dataHolders.add(box); // save a copy for printing later
+                } else {
+                    TextField text = new TextField();
+                    text.setOnKeyPressed(actionTraverse);
+                    gridPane.add(text, 1, row);
+                    dataHolders.add(text);
+                }
             } else { // REGNO, DATE
                 TextField textField = new TextField();
                 textField.setOnKeyPressed(actionTraverse);
@@ -283,7 +295,7 @@ class CreateCertificateDialog extends Stage {
             }
 //            indicator.setProgress(row * 100 / wrapper.getCertificateFields().size()); // null pointer
             populatingProgress.set(row * 100 / wrapper.getCertificateFields().size());
-//            System.out.println("populating progress" + populatingProgress.get());
+//            Debugger.log("populating progress" + populatingProgress.get());
             row++;
         }
         /* populated */
@@ -315,13 +327,19 @@ class CreateCertificateDialog extends Stage {
     }
     
     private void retrieveInfoAndSendForPrinting() {
-        // System.out.println("Populating certificate fields :"); // debug
+        // Debugger.log("Populating certificate fields :"); // debug
         HashMap<CertificateField, String> fields = new HashMap<>(); // certificate field and user input
         String savename = "";
         int index = 0;
         for (CertificateField field : wrapper.getCertificateFields()) {
             if (field.getFieldType() == FieldType.ARRAY || field.getFieldType() == FieldType.TEXT) {
-                fields.put(field, ((ComboBox)dataHolders.get(index)).getSelectionModel().getSelectedItem().toString());
+                if(!field.isRepeating()) {
+                    ComboBox<String> cb = (ComboBox) dataHolders.get(index);
+                    fields.put(field, cb.getSelectionModel().getSelectedItem());
+                } else {
+                    TextField tf = (TextField) dataHolders.get(index);
+                    fields.put(field, tf.getText());
+                }
             } else { // REGNO, DATE
                 TextField tf = (TextField)dataHolders.get(index);
                 fields.put(field, tf.getText());
@@ -338,7 +356,7 @@ class CreateCertificateDialog extends Stage {
 //        } else {
 //            saveFile = new File(savePathField.getText() + File.separatorChar + savename);
 //        }
-//        System.out.println("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
+//        Debugger.log("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
         
         if(savename.contains("/")) {
             // remove slash and every character after slash because windows doesnt support slashes in filenames
@@ -356,9 +374,9 @@ class CreateCertificateDialog extends Stage {
             
     //        try {
     //            BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
-    //            System.out.println("created buffered image...");
+    //            Debugger.log("created buffered image...");
     //            ImageUtils.saveImage(createBufferedImage, saveFile.getAbsolutePath());
-    //            System.out.println("saved image...");
+    //            Debugger.log("saved image...");
     //        } catch (FileNotFoundException ex) {
     //            Logger.getLogger(CreateCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
     //        } catch (IOException ex) {
@@ -379,7 +397,7 @@ class CreateCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER) {
-                    System.out.println("KeyCode.ENTER : Textfield traverse");
+                    Debugger.log("KeyCode.ENTER : Textfield traverse");
                     Node n = (Node) t.getSource();
                     n.impl_traverse(Direction.NEXT);
                 }
@@ -393,7 +411,7 @@ class CreateCertificateDialog extends Stage {
             public void handle(ActionEvent t) {
                 Node n = (Node) t.getSource();
                 n.impl_traverse(Direction.NEXT);
-                System.out.println("ActionEvent on combobox");
+                Debugger.log("ActionEvent on combobox");
             }
         };
     }
@@ -401,10 +419,20 @@ class CreateCertificateDialog extends Stage {
     
     private boolean isFieldsFilled() {
         boolean filled = true;
+        Debugger.log("Data holder size : " + dataHolders.size()); // debug
         for(Node node : dataHolders) {
             if(node instanceof TextField) {
                 TextField tf = (TextField) node;
-                if("".equalsIgnoreCase(tf.getText())) filled = false;
+                if("".equalsIgnoreCase(tf.getText())) {
+                    filled = false;
+                    Debugger.log("textfield not filled : " + tf + "," + tf.getText()) ;
+                }
+            } else if(node instanceof ComboBox) {
+                ComboBox<String> box = (ComboBox<String>) node;
+                if("".equalsIgnoreCase(box.getSelectionModel().getSelectedItem())) {
+                    filled = false;
+                    Debugger.log("combobox not filled : " + box + "," + box.getSelectionModel().getSelectedItem());
+                }
             }
         }
         return filled;
@@ -439,8 +467,10 @@ class CreateCertificateDialog extends Stage {
                 if(field.getFieldType() == FieldType.TEXT) {
                     String item = box.getSelectionModel().getSelectedItem();
                     if(!box.getItems().contains(item)) box.getItems().add(item); // save history
-                    if(!box.getItems().contains("")) box.getItems().add(0, "");
-                    box.getSelectionModel().select(0); // reset value
+//                    if(!field.isRepeating()) {
+                        if(!box.getItems().contains("")) box.getItems().add(0, "");
+                        box.getSelectionModel().select(0);// reset value
+//                    } 
                 }
             }
             index++;
@@ -493,7 +523,7 @@ class CreateCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER){
-                    System.out.println("KeyCode.ENTER : traversing to Direction.NEXT"); // debug
+                    Debugger.log("KeyCode.Enter : traversing to Direction.NEXT");
                     ((Node)t.getSource()).impl_traverse(Direction.NEXT);
                 }
             }
@@ -506,18 +536,22 @@ class CreateCertificateDialog extends Stage {
             public void handle(ActionEvent event) {
                 Button source = (Button) event.getSource();
                 if(source.equals(nextButton)) {
-                    System.out.println("pressed next.."); // debug
                     if(isFieldsFilled()) {
+                        Debugger.log("pressed next...");
                         retrieveInfoAndSendForPrinting();
                         clearOrIncrementFields();
                         resumeFocus();
+                    } else {
+                        Alert.showAlertError(primaryStage, "Error", "Please fill in all the fields");
                     }
                 } else if(source.equals(finishButton)) {
-                    System.out.println("pressed finish.."); // debug
                     if(isFieldsFilled()) {
+                        Debugger.log("pressed finish...");
                         retrieveInfoAndSendForPrinting();
                         close();
-                    }    
+                    } else {
+                        Alert.showAlertError(primaryStage, "Error", "Please fill in all the fields");
+                    }
                 }
             }
         };

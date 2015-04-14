@@ -92,7 +92,7 @@ public final class AboutDialog extends Stage {
             @Override
             public void changed(ObservableValue<? extends Toggle> observable, final Toggle oldValue, Toggle newValue) {
                 if((newValue == null)) {
-//                    System.out.println("resuming");
+//                    Debugger.log("resuming");
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {
@@ -100,17 +100,17 @@ public final class AboutDialog extends Stage {
                         }
                     });
                 } else {
-//                    System.out.println("continueing");
+//                    Debugger.log("continueing");
 //                    if(oldValue.equals(tb1)) removeAboutItems();
 //                    if(oldValue.equals(tb2)) removeCreditsItems();
 //                    if(oldValue.equals(tb3)) removeLicenseItems();
                     if(!newValue.equals(oldValue)) {
-//                        System.out.println("add something");
+//                        Debugger.log("add something");
                         if(newValue.equals(tb1)) addAboutItems();
                         if(newValue.equals(tb2)) addCreditsItems();
                         if(newValue.equals(tb3)) addLicenseItems();
                     } else {
-//                        System.out.println("learn something");
+//                        Debugger.log("learn something");
                     }
                 }
             }
