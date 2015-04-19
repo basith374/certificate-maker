@@ -8,24 +8,24 @@ package org.bluecipherz.certificatemaker;
  *
  * @author bazi
  */
-public class DeleteCommand implements Command {
+public class AddCommand implements Command {
 
     private final CertificateNode _target;
     private final CertificateTab _parent;
     
-    public DeleteCommand(CertificateNode node) {
+    public AddCommand(CertificateNode node, CertificateTab tab) {
         _target = node;
-        _parent = node.getContainer();
+        _parent = tab;
     }
     
     @Override
     public void execute() {
-        _parent.removeNode(_target);
+        _parent.addNewNode(_target);
     }
 
     @Override
     public void undo() {
-        _parent.addNewNode(_target);
+        _parent.removeNode(_target);
     }
     
 }

@@ -77,6 +77,7 @@ public class ResourceManger {
     }
     
     public void loadAppResources() {
+        Debugger.log("[ResourceManager] Loading app resources...");
         this.addimgx32 = new Image(getClass().getResourceAsStream("icons/addimgx32.png"));
         this.addx32 = new Image(getClass().getResourceAsStream("icons/addx32.png"));
         this.delx32 = new Image(getClass().getResourceAsStream("icons/delx32.png"));
@@ -115,8 +116,9 @@ public class ResourceManger {
     }
     
     public void loadSplashResource() {
-//        this.splash = new Image(getClass().getResourceAsStream("icons/premiumsplash.png"));
-        this.splash = new Image(getClass().getResourceAsStream("icons/demosplash.png"));
+//        Debugger.log("[ResourceManager] Loading splash resources...");
+        this.splash = new Image(getClass().getResourceAsStream("icons/premiumsplash.png"));
+//        this.splash = new Image(getClass().getResourceAsStream("icons/demosplash.png"));
     }
     
 }

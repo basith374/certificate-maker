@@ -127,6 +127,7 @@ public class Alert extends Stage {
         });
         setScene(scene);
         sizeToScene();
+        setResizable(false);
         show();
     }
     

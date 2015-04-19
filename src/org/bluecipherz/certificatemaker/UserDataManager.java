@@ -53,7 +53,7 @@ public class UserDataManager {
     public static void setCertificateFilePath(File file) {
         if (file != null) {
             prefs.put("filePath", file.getPath());
-            Debugger.log("Saving file path for current tab : " + file.getPath()); // debug
+            Debugger.log("[UserDataManager] Saving file path for current tab : " + file.getPath()); // debug
             // TODO update title
         } else {
             prefs.remove("filePath");

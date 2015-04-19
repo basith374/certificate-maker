@@ -52,9 +52,15 @@ import javax.imageio.ImageWriter;
  */
 public class ImageUtils {
 
+    private static CertificateUtils cu;
+    private static final ImageUtils INSTANCE = new ImageUtils();
     // class cannot be instantiated
     private ImageUtils() { }
 
+    public static void setCu(CertificateUtils certu) {
+        cu = certu;
+    }
+    
     /**
      * Creates a deep copy of the specified BufferedImage.
      * @param bufferedImage
@@ -194,72 +200,78 @@ public class ImageUtils {
         for (Map.Entry<CertificateField, String> field : fields.entrySet()) {
             if(field.getKey().getFieldType() == FieldType.IMAGE) {
                 // draw avatar image
-                BufferedImage buffimg = ImageIO.read(new File(field.getValue()));
-                int x = field.getKey().getX();
-                int y = field.getKey().getY();
-                int maxwidth = field.getKey().getWidth();
-                int maxheight = field.getKey().getHeight();
-                int imgwidth = buffimg.getWidth();
-                int imgheight = buffimg.getHeight();
-                Debugger.log("image dimensions : width" + imgwidth + ", height" + imgheight); // debug
-                Debugger.log("max image dimensions : width" + maxwidth + ", height" + maxheight); // debug
-                // scale image if larger than specified
-                if(imgwidth > maxwidth || imgheight > maxheight) {
-                    Debugger.log("image dimensions more than normal ; rescaling..."); // debug
-                    AffineTransform at = new AffineTransform();
-                     // scale either proportionally or fixed size
-                    boolean proportional = false;
-                    double xscale = ((double)maxwidth / (double)imgwidth);
-                    double yscale = ((double)maxheight / (double)imgheight);
-                    Debugger.log("calculated scale factors : x" + xscale + ", y" + yscale); // debug
-                    if(imgwidth > maxwidth && imgheight > maxheight){ // if width and height are excess
-                        Debugger.log("scaling both width & height"); // debug
-                        if(proportional) {
-                            Debugger.log("Proportional scale"); // debug
-                            double scalefactor;
-                            if(xscale > yscale) {
-                                scalefactor = xscale;
-                            } else if(yscale > xscale) {
-                                scalefactor = yscale;
+                File file = new File(field.getValue());
+                Debugger.log("[ImageUtils] opening avatar image " + file.getAbsolutePath()); // debug
+                if(cu.isImageFile(file)) {
+                    BufferedImage buffimg = ImageIO.read(file);
+                    int x = field.getKey().getX();
+                    int y = field.getKey().getY();
+                    int maxwidth = field.getKey().getWidth();
+                    int maxheight = field.getKey().getHeight();
+                    int imgwidth = buffimg.getWidth();
+                    int imgheight = buffimg.getHeight();
+                    Debugger.log("[ImageUtils] image dimensions : width" + imgwidth + ", height" + imgheight); // debug
+                    Debugger.log("[ImageUtils] max image dimensions : width" + maxwidth + ", height" + maxheight); // debug
+                    // scale image if larger than specified
+                    if(imgwidth > maxwidth || imgheight > maxheight) {
+                        Debugger.log("image dimensions more than normal ; rescaling..."); // debug
+                        AffineTransform at = new AffineTransform();
+                         // scale either proportionally or fixed size
+                        boolean proportional = false;
+                        double xscale = ((double)maxwidth / (double)imgwidth);
+                        double yscale = ((double)maxheight / (double)imgheight);
+                        Debugger.log("calculated scale factors : x" + xscale + ", y" + yscale); // debug
+                        if(imgwidth > maxwidth && imgheight > maxheight){ // if width and height are excess
+                            Debugger.log("scaling both width & height"); // debug
+                            if(proportional) {
+                                Debugger.log("Proportional scale"); // debug
+                                double scalefactor;
+                                if(xscale > yscale) {
+                                    scalefactor = xscale;
+                                } else if(yscale > xscale) {
+                                    scalefactor = yscale;
+                                } else {
+                                    Debugger.log("Both scale factors are equals :");
+                                    scalefactor = xscale; // or yscale, either would suffice
+                                }
+                                at.scale(scalefactor, scalefactor);
                             } else {
-                                Debugger.log("Both scale factors are equals :");
-                                scalefactor = xscale; // or yscale, either would suffice
+                                Debugger.log("Non-Proportional scale"); // debug
+                                at.scale(xscale, yscale);
                             }
-                            at.scale(scalefactor, scalefactor);
-                        } else {
-                            Debugger.log("Non-Proportional scale"); // debug
-                            at.scale(xscale, yscale);
+                        } else if(imgwidth > maxwidth) { // if width is excess
+                            Debugger.log("scaling both width"); // debug
+                            if(proportional) {
+                                Debugger.log("Proportional scale"); // debug
+                                at.scale(xscale, xscale);
+                            } else {
+                                Debugger.log("Non-Proportional scale"); // debug
+                                at.scale(xscale, 1.0);
+                            }
+                        } else if(imgheight > maxheight) { // if height is excess
+                            Debugger.log("scaling both height"); // debug
+                            if(proportional) {
+                                Debugger.log("Proportional scale"); // debug
+                                at.scale(yscale, yscale);
+                            } else {
+                                Debugger.log("Non-Proportional scale"); // debug
+                                at.scale(1.0, yscale);
+                            }
                         }
-                    } else if(imgwidth > maxwidth) { // if width is excess
-                        Debugger.log("scaling both width"); // debug
-                        if(proportional) {
-                            Debugger.log("Proportional scale"); // debug
-                            at.scale(xscale, xscale);
-                        } else {
-                            Debugger.log("Non-Proportional scale"); // debug
-                            at.scale(xscale, 1.0);
-                        }
-                    } else if(imgheight > maxheight) { // if height is excess
-                        Debugger.log("scaling both height"); // debug
-                        if(proportional) {
-                            Debugger.log("Proportional scale"); // debug
-                            at.scale(yscale, yscale);
-                        } else {
-                            Debugger.log("Non-Proportional scale"); // debug
-                            at.scale(1.0, yscale);
-                        }
+                        BufferedImageOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+                        g2.drawImage(buffimg, op, x, y);                    
+                    } else {
+                        g2.drawImage(buffimg, null, x, y); // image dimensions less than specified
                     }
-                    BufferedImageOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
-                    g2.drawImage(buffimg, op, x, y);                    
+                    Debugger.log("[ImageUtils] drawImage(" + field.getValue() + ")"); // debug
                 } else {
-                    g2.drawImage(buffimg, null, x, y); // image dimensions less than specified
+                    Debugger.log("[ImageUtils] WARNING : invalid avatar image...");
                 }
-                Debugger.log("drawImage(" + field.getValue() + ")"); // debug
             } else {
                 CertificateText text = new CertificateText(field.getKey());
                 text.setText(field.getValue());
-                int x = (int) (field.getKey().getX() - text.getLayoutBounds().getWidth() / 2);
-                int y = field.getKey().getY();
+                int x = (int) (field.getKey().getX().intValue() - text.getWidth() / 2);
+                int y = field.getKey().getY().intValue();
                 // convert fx values to awt
                 String fontFamily = field.getKey().getFontFamily();
                 String fontStyleString = field.getKey().getFontStyle();
@@ -283,8 +295,8 @@ public class ImageUtils {
         BufferedImage newImage;
 //        if("jpg".equalsIgnoreCase(UserDataManager.getDefaultImageFormat())) {
             newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-            Debugger.log("combineImages() IMAGE TYPE : TYPE_INT_RGB"); // debug
-            Debugger.log("img1 type :" + img1.getType() + ", img2 type :" + img2.getType());
+            Debugger.log("[ImageUtils] combineImages() IMAGE TYPE : TYPE_INT_RGB"); // debug
+            Debugger.log("[ImageUtils] img1 type :" + img1.getType() + ", img2 type :" + img2.getType());
 //        } else {
 //            newImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB); // png
 //            Debugger.log("combineImages() IMAGE TYPE : TYPE_INT_ARGB"); // debug

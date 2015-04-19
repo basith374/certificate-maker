@@ -1,5 +1,4 @@
 /*
- * Copyright BCZ Inc. 2015.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -19,10 +18,10 @@ package org.bluecipherz.certificatemaker;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -35,18 +34,19 @@ import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Line;
-import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import static org.bluecipherz.certificatemaker.Window.getMouseMode;
 
@@ -54,27 +54,49 @@ import static org.bluecipherz.certificatemaker.Window.getMouseMode;
  *
  * @author bazi
  */
-public final class CertificateTab extends Tab {
+public final class CertificateTab {
 
-    private static Stage PRIMARY_STAGE;
-    private static Window WINDOW;
+    private static Stage PRIMARY_STAGE; // backreference
+    private static Window WINDOW; // backreference
     
-    private final ScrollPane scrollPane;
+     // very loose implementation, do something abt it.
+    private static HashMap<Tab, CertificateTab> tabMap = Window.tabMap;
+    
+    private final ScrollPane scrollPane; // pannable, zoomable in the future :)
     private final Group fieldContainer;
-    private final ImageView imageView;;
+    private final ImageView certificateImageView;
     
-    private BooleanProperty dateFieldAdded;
-    private BooleanProperty regnoFieldAdded;
-    private BooleanProperty avatarFieldAdded;
+    private BooleanProperty dateFieldAdded; // dont know if this should be a wrapper type
+    private BooleanProperty regnoFieldAdded; // dont know if this should be a wrapper type
+    private BooleanProperty avatarFieldAdded; // dont know if this should be a wrapper type
     
-    private BooleanProperty changed;
+    private BooleanProperty changed; // this will get obsolete in the future
     
     private File certificateFile;
-    private ObservableList<CertificateField> fields;
+    private ObservableList<CertificateField> fields; // this can be downgraded to ArrayList.
     private ReadOnlyStringWrapper name;
     private ReadOnlyObjectWrapper<File> certificateImage;
     
+    private final Tab tab;
+    
     private CommandManager commandManager = new CommandManager();
+    
+    /* used for action listeners, poor thing, they dont know what a certificate node is
+     * totally waste of resources but necessary. :( maybe find something better in the future
+     */
+    private HashMap<Node, CertificateNode> certificateContents = new HashMap<>();
+    
+    public CertificateNode getCertificateNode(Node node) {
+//        if(node instanceof ImageView) {
+//            ImageView image = (ImageView) node;
+//            return certificateContents.get(image);
+//        } else if(node instanceof Text) {
+//            Text text = (Text) node;
+//            return certificateContents.get(text);
+//        }
+//        return null;
+        return certificateContents.get(node);
+    }
     
     public CommandManager getCommandManager() {
         return commandManager;
@@ -106,19 +128,33 @@ public final class CertificateTab extends Tab {
     
     private static boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
 
+    public Tab get() {
+        return tab;
+    }
+    
     public CertificateTab(CertificateWrapper wrapper) {
+        this.tab = new Tab();
+        tab.tabPaneProperty().addListener(new ChangeListener<TabPane>() {
+            @Override
+            public void changed(ObservableValue<? extends TabPane> ov, TabPane t, TabPane t1) {
+                if(t1 == null) {
+                    tabMap.remove(tab);
+                }
+            }
+        });
         fields = FXCollections.observableArrayList(wrapper.getCertificateFields());
         fields.addListener(new ListChangeListener<CertificateField>() {
             @Override
             public void onChanged(ListChangeListener.Change<? extends CertificateField> change) {
-                Debugger.log("no of fields changed : " + fields.size());
+                Debugger.log("[CertificateTab] no of fields changed : " + fields.size()
+                        + "\n[CertificateTab] fields : " + change.getList());
             }
         });
         name = new ReadOnlyStringWrapper();
         name.addListener(new ChangeListener<String>() {
             @Override
             public void changed(ObservableValue<? extends String> ov, String t, String t1) {
-                setText(t1);
+                tab.setText(t1);
             }
         });
         name.set(wrapper.getName());
@@ -148,7 +184,7 @@ public final class CertificateTab extends Tab {
             }
         });
         
-        imageView = new ImageView();
+        certificateImageView = new ImageView();
         
         avatarFieldAdded = new SimpleBooleanProperty(false);
         dateFieldAdded = new SimpleBooleanProperty(false);
@@ -162,11 +198,11 @@ public final class CertificateTab extends Tab {
         });
         
         EventHandler<MouseEvent> handler = getImageMouseHandler();
-        imageView.setOnMousePressed(handler);
-        imageView.setOnMouseDragged(handler);
-        imageView.setOnMouseReleased(handler);
+        certificateImageView.setOnMousePressed(handler);
+        certificateImageView.setOnMouseDragged(handler);
+        certificateImageView.setOnMouseReleased(handler);
         
-        fieldContainer.getChildren().add(imageView);
+        fieldContainer.getChildren().add(certificateImageView);
         
         // create gui components from wrapper fields
         Platform.runLater(new Runnable() {
@@ -177,47 +213,60 @@ public final class CertificateTab extends Tab {
         });
         
         scrollPane.setContent(fieldContainer);
-        setContent(scrollPane);
+        tab.setContent(scrollPane);
     }
     
     private void loadGuiComponents() {
         if(!fields.isEmpty()) {
             for (CertificateField field : fields) {
                 if(field.getFieldType() == FieldType.IMAGE) {
-                    ImageView avatarImage = createAvatarImage(field);
-                    addImage(avatarImage, field);
-                    setAvatarFieldAdded(true);
+                    CertificateAvatar avatarImage = createAvatarImage(field);
+                    addNode(avatarImage); // add just gui components
                 } else {
                     CertificateText certificateText = createText(field);
-//                    certificateText.setX(field.getX() - certificateText.getLayoutBounds().getWidth() / 2); // alignment
-                    addText(certificateText, field);
-                    if(disallowmultiplefields) {
-                        if(field.getFieldType() == FieldType.DATE) setDateFieldAdded(true);
-                        if(field.getFieldType() == FieldType.REGNO) setRegnoFieldAdded(true);
-                    }
+                    addNode(certificateText); // add just gui components
                 }
             }
         }
     }
 
-    public CertificateWrapper getUpdatedWrapper() {
+    public CertificateWrapper getDisplayableWrapper() {
+        CertificateWrapper wrapper = new CertificateWrapper();
+        wrapper.setCertificateFields(fields);
+        wrapper.setCertificateImage(certificateImage.get());
+        wrapper.setName(name.get());
+        Debugger.log("[CertificateTab]Retrieving wrapper : " + wrapper);
+        return wrapper;
+    }
+    
+    public CertificateWrapper getSerializableWrapper() {
         CertificateWrapper wrapper = new CertificateWrapper();
 //        List<CertificateField> _fields = fields;
 //        wrapper.setCertificateFields(_fields);
         ArrayList<CertificateField> _fields = new ArrayList<>(fields);
         wrapper.setCertificateFields(_fields);
-        wrapper.setCertificateImage(getCertificateImage());
-        wrapper.setName(getName());
+        wrapper.setCertificateImage(certificateImage.get());
+        wrapper.setName(name.get());
         return wrapper;
     }
     
+    public ObservableList<CertificateNode> createNodeList() {
+        ObservableList<CertificateNode> nodes = FXCollections.observableArrayList();
+        for(Map.Entry<Node, CertificateNode> node : certificateContents.entrySet()) {
+            nodes.add(node.getValue());
+        }
+        return nodes;
+    }
+    
     public ReadOnlyDoubleProperty loadImage() {
+        Debugger.log("[CertificateTab] Opening certificate image : " + certificateImage.get().toURI().toString()); // debug
         final Image image = new Image(certificateImage.get().toURI().toString(), true);
         image.progressProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
                 if(newValue.intValue() == 1) {
-                    imageView.setImage(image);
+                    Debugger.log("[CertificateTab] loaded image..."); // debug
+                    certificateImageView.setImage(image);
                 }
             }
 
@@ -284,11 +333,6 @@ public final class CertificateTab extends Tab {
         this.certificateFile = file;
     }
 
-
-    public ScrollPane getScrollPane() {
-        return scrollPane;
-    }
-    
     public Group getFieldContainer() {
         return fieldContainer;
     }
@@ -305,10 +349,11 @@ public final class CertificateTab extends Tab {
             double initialComponentY;
             @Override
             public void handle(MouseEvent event) {
-                Debugger.log("clicked : x" + event.getX() + ", y" + event.getY());
+                Debugger.log("[CeritificateTab] clicked : x" + event.getX() + ", y" + event.getY()); // debug
                 EventType<? extends Event> eventType = event.getEventType();
                 MouseButton button = event.getButton();
-                ImageView imageView = (ImageView) event.getSource();
+                ImageView imageView =  (ImageView) event.getSource();
+                CertificateAvatar ca = (CertificateAvatar) getCertificateNode(imageView);
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
                     if(button == MouseButton.PRIMARY) {
                         scrollPane.setPannable(false);
@@ -317,18 +362,16 @@ public final class CertificateTab extends Tab {
                             initialComponentY = imageView.getY();
                             initialEventX = event.getX();
                             initialEventY = event.getY();
-    //                        Debugger.log("Mode : move"); // debug
                         } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-//                            Group parent = (Group) imageView.getParent();
-//                            parent.getChildren().remove(imageView);
                             // new command pattern
-                            DeleteCommand command = new DeleteCommand(imageView);
-                            commandManager.addAndExecute(command);
-                            setAvatarFieldAdded(false);
-    //                        Debugger.log("Mode : delete"); // debug
+                            DeleteCommand command = new DeleteCommand(ca);
+                            commandManager.add(command);
+                            // controlled removal
+//                            CertificateTab tab = ca.getContainer();
+//                            tab.removeNode(ca);
                         } else if(Window.getMouseMode() == Window.MODE_EDIT) {
-                            Debugger.log("Editing image"); // debug
-                            WINDOW.showEditAvatarDialog(CertificateTab.this, imageView);
+                            Debugger.log("[CertificateTab] opening image edit dialog"); // debug
+                            WINDOW.showEditAvatarDialog(CertificateTab.this, ca);
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
@@ -338,11 +381,8 @@ public final class CertificateTab extends Tab {
                             double currentY = event.getY();
                             double x = currentX - initialEventX + initialComponentX;
                             double y = currentY - initialEventY + initialComponentY;
-//                            imageView.setX(x);
-//                            imageView.setY(y);
-//                            // new command pattern
-                            MoveCommand command = new MoveCommand(imageView, new Point2D(initialComponentX, initialComponentY),new Point2D(x, y));
-                            commandManager.addAndExecute(command);
+                            imageView.setX(x);
+                            imageView.setY(y);
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
@@ -352,8 +392,14 @@ public final class CertificateTab extends Tab {
                             double currentY = event.getY();
                             double x = currentX - initialEventX + initialComponentX;
                             double y = currentY - initialEventY + initialComponentY;
-                            imageView.setX(x);
-                            imageView.setY(y);
+                            // save command history
+                            Point2D start = new Point2D(initialComponentX, initialComponentY);
+                            Point2D end = new Point2D(x, y);
+                            MoveCommand command = new MoveCommand(ca, start, end);
+                            commandManager.add(command);
+                            // move
+//                            imageView.setX(x);
+//                            imageView.setY(y);
                         }
                     }
                 }
@@ -371,7 +417,8 @@ public final class CertificateTab extends Tab {
             public void handle(MouseEvent event) {
                 EventType<? extends Event> eventType = event.getEventType();
                 MouseButton button = event.getButton();
-                CertificateText text = (CertificateText) event.getSource();
+                Text text = (Text) event.getSource();
+                CertificateText ct = (CertificateText) getCertificateNode(text);
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
                     if(button == MouseButton.PRIMARY) {
                         scrollPane.setPannable(false); // scrollpane pan
@@ -380,21 +427,17 @@ public final class CertificateTab extends Tab {
                             initialComponentY = text.getY();
                             initialEventX = event.getX();
                             initialEventY = event.getY();
+                            Debugger.log("[CertificateTab] moving component start : " + initialEventX + "," + initialEventY); // debug
                         } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-//                            Group parent = (Group) text.getParent();
-//                            parent.getChildren().remove(text);
                             // new command pattern
-                            DeleteCommand command = new DeleteCommand(text);
-                            commandManager.addAndExecute(command);
-                            //
-//                            Group parent = (Group) text.getParent();
-//                            Debugger.log("Deleting : " + text.getText() + ", contents :" + (parent.getChildren().size() - 1)); // new debug
-                            FieldType type = text.fieldTypeProperty().get();
-                            if(type == FieldType.DATE) setDateFieldAdded(false);
-                            if(type == FieldType.REGNO) setRegnoFieldAdded(false);
+                            DeleteCommand command = new DeleteCommand(ct);
+                            commandManager.add(command);
+//                            CertificateTab tab = ct.getContainer();
+//                            tab.removeNode(ct); // highly controlled remove action, very safe
+                            Debugger.log("[CertificateTab] Deleting : " + text.getText() + ", contents :" + certificateContents.size()); // new debug
                         } else if (Window.getMouseMode() == Window.MODE_EDIT) {
 
-                            WINDOW.showEditFieldDialog(CertificateTab.this, text);
+                            WINDOW.showEditFieldDialog(CertificateTab.this, ct);
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
@@ -416,11 +459,15 @@ public final class CertificateTab extends Tab {
                             double currentY = event.getY();
                             double x = currentX - initialEventX + initialComponentX;
                             double y = currentY - initialEventY + initialComponentY;
+                            Debugger.log("[CertificateTab] moving component end : " + currentX + "," + currentY); // debug
+                            // new command pattern
+                            Point2D start = new Point2D(initialComponentX, initialComponentY);
+                            Point2D end = new Point2D(x, y);
+                            MoveCommand command = new MoveCommand(ct, start, end);
+                            commandManager.add(command);
+                            // real move
 //                            text.setX(x);
 //                            text.setY(y);
-                            // new command pattern
-                            MoveCommand command = new MoveCommand(text, new Point2D(initialComponentX, initialComponentY), new Point2D(x, y));
-                            commandManager.addAndExecute(command);
                         }
                     }
                 }
@@ -450,7 +497,7 @@ public final class CertificateTab extends Tab {
                     initialX = event.getX();
                     initialY = event.getY();
                     if(button == MouseButton.PRIMARY) {
-                        Debugger.log("clicked : x" + event.getX() + ", y" + event.getY() + ", " + type.toString()); // debug
+                        Debugger.log("[CertificateTab] clicked : x" + event.getX() + ", y" + event.getY() + ", " + type.toString()); // debug
                         if(getMouseMode() == Window.MODE_ADD) {
                             WINDOW.showNewFieldDialog(CertificateTab.this, new Point2D(event.getX(), event.getY()));
                         } else if(getMouseMode() == Window.MODE_ADDIMAGE) { // remove this if if you want selection lines on all modes
@@ -512,15 +559,17 @@ public final class CertificateTab extends Tab {
                         if(getMouseMode() == Window.MODE_ADDIMAGE) {
                             if(!isAvatarFieldAdded()) {
                                 if(initialX == event.getX() && initialY == event.getY()) {
-                                    Debugger.log("clicked, showing avatar dialog"); // debug
+                                    Debugger.log("[CertificateTab] clicked, showing avatar dialog"); // debug
                                     WINDOW.showAvatarAddDialog(CertificateTab.this, new Point2D(event.getX(), event.getY()));
                                 } else {
-                                    Debugger.log("released, calculating avatar size"); // debug
+                                    Debugger.log("[CertificateTab] released, calculating avatar size"); // debug
                                     WINDOW.addAvatar(CertificateTab.this, new Point2D(initialX, initialY), new Point2D(event.getX(), event.getY()));
                                 }
                             } else {
                                 Alert.showAlertInfo(PRIMARY_STAGE, "Info", "Avatar already added"); // temporarily commented
                             }
+                        } else { // works for add, delete, edit, move
+                            Debugger.log("[CertificateTab] mouse released at : " + event.getX() + "," + event.getY()); // debug
                         }
                         fieldContainer.getChildren().remove(adjXline);
                         fieldContainer.getChildren().remove(oppXline);
@@ -538,77 +587,109 @@ public final class CertificateTab extends Tab {
         };
     }
 
-    public void addNewText(CertificateText text, CertificateField field) {
-        addText(text, field);
+    /*
+     * used when loading wrapper where CertificateField is already specified
+     */
+    public CertificateField addNode(CertificateNode node) {
+        fieldContainer.getChildren().add(node.get());
+        CertificateField field = node.getObserver(); // may be renamed in future
+        if(field == null) Debugger.log("[CertificateTab] node' observer is null"); // debug
+//        Debugger.log("[CertificateTab]observer field :" + field); // debug
+        certificateContents.put(node.get(), node); // latest implementation, used by event handlers
+        node.setContainer(this); // backreference
+//        field.changedProperty().addListener(new ChangeListener<Boolean>() { // TODO implement this
+//            @Override
+//            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+//                if(t1) setChanged(true);
+//            }
+//        });
+        FieldType type = node.getFieldType();
+        if(type == FieldType.DATE) setDateFieldAdded(true);
+        if(type == FieldType.REGNO) setRegnoFieldAdded(true);
+        if(type == FieldType.IMAGE) setAvatarFieldAdded(true);
+        return field;
+    }
+    
+    /*
+     * used when there is no wrapper
+     */
+    public void addNewNode(CertificateNode node) {
+        CertificateField field = addNode(node);
+        if(field == null) Debugger.log("[CertificateTab] WARN : adding field that is null");
         fields.add(field);
     }
     
-    public void addText(CertificateText text, CertificateField field) {
-        fieldContainer.getChildren().add(text);
-        field.setParent(fields); // backreference
-        field.changedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if(t1) setChanged(true);
-            }
-        });
-//        Debugger.log("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
-    }
-    
-    public void addNewImage(ImageView image, CertificateField field) {
-        addImage(image, field);
-        fields.add(field);
-    }
-    
-    public void addImage(ImageView image, CertificateField field) {
-        fieldContainer.getChildren().add(image);
-        field.setParent(fields); // backreference
-        field.changedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if(t1) setChanged(true);
-            }
-        });
-//        Debugger.log("new field added " + field.getFieldType() + ", total wrapper contents : " + fields.size());
+    public boolean removeNode(CertificateNode node) {
+        CertificateField field = node.getObserver();
+        fields.remove(field);
+        certificateContents.remove(node.get()); // latest implementation
+        node.setContainer(null); // fix
+        FieldType type = node.getFieldType();
+        if(type == FieldType.DATE) setDateFieldAdded(false);
+        if(type == FieldType.REGNO) setRegnoFieldAdded(false);
+        if(type == FieldType.IMAGE) setAvatarFieldAdded(false);
+        return fieldContainer.getChildren().remove(node.get());
     }
     
     /**
-     * used by outsiders
-     * converts and CertificateField into a Text object
+     * create a CertificateText object according to the field. and couples them together
+     * hence synchronizing screen state and session state
      * @param field
      * @return 
      */
     public CertificateText createText(final CertificateField field) {
         CertificateText text = new CertificateText(field);
-        text.setX(text.getX() - text.getLayoutBounds().getWidth() / 2); // alignment
+        text.setX(text.getX() - text.getWidth() / 2); // alignment
         // listeners
         EventHandler<MouseEvent> mouseHandler = getTextMouseHandler();
         text.setOnMousePressed(mouseHandler);
         text.setOnMouseDragged(mouseHandler);
         text.setOnMouseReleased(mouseHandler);
-        // bindings
-        field.observe(text);
+        field.observe(text); // bindings
         return text;
     }
 
-    public ImageView createAvatarImage(final CertificateField field) {
+    public CertificateAvatar createAvatarImage(final CertificateField field) {
+        if(field == null) Debugger.log("[CertificateTab] ERROR : field is null for creating avatar..."); // debug
         Image image = createImage(field.getWidth(), field.getHeight());
-//        Debugger.log("image dimensions : " + width + "x" + height); // debug
-        ImageView imageView = new ImageView(image);
-        imageView.setX(field.getX());
-        imageView.setY(field.getY());
+        CertificateAvatar avatar = new CertificateAvatar(image);
+        avatar.setX(field.getX().intValue());
+        avatar.setY(field.getY().intValue());
 //        Debugger.log("image coords : x" + x + " y" + y); // debug
         EventHandler<MouseEvent> mouseHandler = getAvatarMouseHandler();
-        imageView.setOnMousePressed(mouseHandler);
-        imageView.setOnMouseDragged(mouseHandler);
-        imageView.setOnMouseReleased(mouseHandler);
-        // bindings
-        field.observe(imageView);
-        return imageView;
+        avatar.setOnMousePressed(mouseHandler);
+        avatar.setOnMouseDragged(mouseHandler);
+        avatar.setOnMouseReleased(mouseHandler);
+        // as long as this is here we dont have to use two paramaters on addNode() method. eg. addNode(CertificateNode, CertificateField)
+        field.observe(avatar); // bindings
+        return avatar;
     }
     
-    public Image createImage(int width, int height)  {
-        return new Image(getClass().getResourceAsStream("icons/avatarx1500.png"), width, height, false, true);
+    /**
+     * Creates and returns a new fx Image object according to the width and height specified.
+     * @param width
+     * @param height
+     * @return 
+     */
+    public Image createImage(Integer width, Integer height)  {
+        Debugger.log("[CertificateTab] creating image with dimensions : " + width + "x" + height); // debug
+        return new Image(getClass().getResourceAsStream("icons/avatarx1500.png"), width.doubleValue(), height.doubleValue(), false, true);
+    }
+    
+    public void setCursorIcon(Cursor cursor) {
+        
+    }
+    
+    public void setCursonIconForNode(Cursor cursor) {
+        
+    }
+    
+    public void setCursorIconForText(Cursor cursor) {
+        
+    }
+    
+    public void setCursorIconForImage(Cursor cursor) {
+        
     }
     
     /*

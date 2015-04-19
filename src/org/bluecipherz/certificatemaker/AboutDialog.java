@@ -21,10 +21,12 @@ import com.sun.javafx.event.BasicEventDispatcher;
 import com.sun.javafx.event.EventRedirector;
 import com.sun.javafx.event.RedirectedEvent;
 import com.sun.javafx.scene.EnteredExitedHandler;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
@@ -196,7 +198,8 @@ public final class AboutDialog extends Stage {
     public String readFile(String s) {
         StringBuilder sb = new StringBuilder();
         try {
-            FileInputStream fin = new FileInputStream(s);
+            BufferedInputStream fin  = new BufferedInputStream(getClass().getResourceAsStream(s));
+//            FileInputStream fin = new FileInputStream(s);
             int i;
             do {
                 i = fin.read();

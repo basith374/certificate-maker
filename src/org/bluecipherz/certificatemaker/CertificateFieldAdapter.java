@@ -30,40 +30,38 @@ public class CertificateFieldAdapter extends XmlAdapter<CertificateField, Certif
 
     @Override
     public CertificateField unmarshal(CertificateField v) throws Exception {
-        CertificateField certificateField = new CertificateField(v.getX(), v.getY());
         if(v.getFieldType() == FieldType.IMAGE) {
-            certificateField.setFieldType(FieldType.IMAGE);
-            certificateField.setWidth(v.getWidth());
-            certificateField.setHeight(v.getHeight());
-        } else {
-            certificateField.setFieldName(v.getFieldName());
-            certificateField.setFieldType(v.getFieldType());
-            certificateField.setFontFamily(v.getFontFamily());
-            certificateField.setFontSize(v.getFontSize());
-            certificateField.setFontStyle(v.getFontStyle());
-            if(v.getFieldType() == FieldType.TEXT) certificateField.setRepeating(v.isRepeating());
-            if(v.getFieldType() == FieldType.ARRAY) certificateField.setArray(v.getArray()); // important!
+            Debugger.log("[CertificateFieldAdapter] unmarshalling IMAGE at " + v.getX() + "," + v.getY() + ", " + v.getFieldType()); // debug
+            return new CertificateField(v.getX(), v.getY(), FieldType.IMAGE, v.getWidth(), v.getHeight());
+        } else if(v.getFieldType() == FieldType.TEXT) {
+            Debugger.log("[CertificateFieldAdapter] unmarshalling TEXT at " + v.getX() + "," + v.getY() + ", " + v.getFieldType()); // debug
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle(), v.getFieldName(), v.isRepeating());
+        } else if(v.getFieldType() == FieldType.ARRAY) {
+//            Debugger.log("[CertificateFieldAdapter] unmarshalling ARRAY at " + v.getX() + "," + v.getY() + ", " + v.getFieldType() + ", array :" + v.getArray()); // debug
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle(), v.getFieldName(), v.getArray());
+        } else { // REGNO, DATE
+            if(v.getX() == null) Debugger.log("[CertificateFieldAdapter] x is null"); // debug
+            if(v.getY() == null) Debugger.log("[CertificateFieldAdapter] y is null"); // debug
+            if(v.getFieldType() == null) Debugger.log("[CertificateFieldAdapter] field type is null"); // debug
+            Debugger.log("[CertificateFieldAdapter] unmarshalling (DATE or REGNO) at " + v.getX() + "," + v.getY() + ", " + v.getFieldType()); // debug
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle());
         }
-        return certificateField;
     }
 
     @Override
     public CertificateField marshal(CertificateField v) throws Exception {
-        CertificateField certificateField = new CertificateField(v.getX(), v.getY());
+        if(v.getFieldType() == null) Debugger.log("[CeritificateFieldAdapter] MARSHALL ERROR : no field type specified");
         if(v.getFieldType() == FieldType.IMAGE) {
-            certificateField.setFieldType(FieldType.IMAGE);
-            certificateField.setWidth(v.getWidth());
-            certificateField.setHeight(v.getHeight());
-        } else {
-            certificateField.setFieldName(v.getFieldName());
-            certificateField.setFieldType(v.getFieldType());
-            certificateField.setFontFamily(v.getFontFamily());
-            certificateField.setFontSize(v.getFontSize());
-            certificateField.setFontStyle(v.getFontStyle());
-            if(v.getFieldType() == FieldType.TEXT) certificateField.setRepeating(v.isRepeating());
-            if(v.getFieldType() == FieldType.ARRAY) certificateField.setArray(v.getArray()); // important!
+            Debugger.log("[CertificateFieldAdapter] avatar dimensions : " + v.getWidth() + "," + v.getHeight()); // debug
+            return new CertificateField(v.getX(), v.getY(), FieldType.IMAGE, v.getWidth(), v.getHeight());
+        } else if(v.getFieldType() == FieldType.TEXT) {
+            Debugger.log("[CertificateFieldAdapter] font size :" + v.getFontSize() + ", repeating :" + v.isRepeating()); // debug
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle(), v.getFieldName(), v.isRepeating());
+        } else if(v.getFieldType() == FieldType.ARRAY) {
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle(), v.getFieldName(), v.getArray());
+        } else { // REGNO, DATE
+            return new CertificateField(v.getX(), v.getY(), v.getFieldType(), v.getFontFamily(), v.getFontSize(), v.getFontStyle());
         }
-        return certificateField;
     }
     
 }

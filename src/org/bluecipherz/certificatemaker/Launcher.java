@@ -52,6 +52,7 @@ public class Launcher extends Application {
     public static void main(String[] args) throws Exception { launch(args); }
 
     @Override public void init() {
+        Debugger.log("[Launcher] Launching BCZ Certificate Maker(TM)...");
         ResourceManger.getInstance().loadSplashResource();
         ImageView splashimage = new ImageView(ResourceManger.getInstance().splash);
         splashLayout = new VBox();
@@ -61,18 +62,22 @@ public class Launcher extends Application {
 
     @Override public void start(final Stage initStage) throws Exception {
         showSplash(initStage);
+//        try {
+            // wait for two seconds and show the main stage
+            PauseTransition pause = new PauseTransition(Duration.seconds(2));
+            pause.setOnFinished(new EventHandler<ActionEvent>() {
+                @Override
+                public void handle(ActionEvent t) {
+                        Window window = new Window();
+                        window.show();
+                        initStage.hide();
 
-        // wait for two seconds and show the main stage
-        PauseTransition pause = new PauseTransition(Duration.seconds(2));
-        pause.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                Window window = new Window();
-                window.show();
-                initStage.hide();
-            }
-        });
-        pause.play();
+                }
+            });
+            pause.play();
+//        } catch(Exception e) {
+//            Alert.showAlertError(initStage, "ERROR", e.getLocalizedMessage());
+//        }
     }
 
     private void showSplash(Stage initStage) {

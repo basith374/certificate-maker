@@ -5,8 +5,6 @@
 package org.bluecipherz.certificatemaker;
 
 import javafx.geometry.Point2D;
-import javafx.scene.Node;
-import javafx.scene.image.ImageView;
 
 /**
  *
@@ -14,40 +12,30 @@ import javafx.scene.image.ImageView;
  */
 public class MoveCommand implements Command {
 
-    private Node _target;
-    private Point2D end;
-    private Point2D start;
+    private final CertificateNode _target;
+    private final Point2D end;
+    private final Point2D start;
     
-    public MoveCommand(Node node, Point2D start, Point2D end) {
+    public MoveCommand(CertificateNode node, Point2D start, Point2D end) {
         _target = node;
-        this.end = end;
         this.start = start;
+        this.end = end;
+//        Debugger.log("move command received , destination: " + end.getX() + "," + end.getY()); // debug
     }
     
     @Override
     public void execute() {
-        if(_target instanceof CertificateText) {
-            CertificateText text = (CertificateText) _target;
-            text.setX(end.getX());
-            text.setY(end.getY());
-        } else {
-            ImageView image = (ImageView) _target;
-            image.setX(end.getX());
-            image.setY(end.getY());
-        }
+        int x = (int) end.getX();
+        int y = (int) end.getY();
+        _target.setX(x);
+        _target.setY(y);
+//        Debugger.log("final destination : " + x + "," + y); // debug
     }
 
     @Override
     public void undo() {
-        if(_target instanceof CertificateText) {
-            CertificateText text = (CertificateText) _target;
-            text.setX(start.getX());
-            text.setY(start.getY());
-        } else {
-            ImageView image = (ImageView) _target;
-            image.setX(start.getX());
-            image.setY(start.getY());
-        }
+        _target.setX((int) start.getX());
+        _target.setY((int) start.getY());
     }
     
 }

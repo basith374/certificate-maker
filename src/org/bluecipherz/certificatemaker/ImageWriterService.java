@@ -186,6 +186,44 @@ public class ImageWriterService {
             }
         };
     }
+    
+    // TODO seperate workers for jpg and png
+    public Task<Void> createJPGWorker(final BufferedImage bufferedImage, final File saveFile) {
+        return new Task() {
+            @Override
+            protected Void call() throws Exception {
+                try (FileOutputStream fos = new FileOutputStream(saveFile); ImageOutputStream ios = ImageIO.createImageOutputStream(fos)) {
+                    Debugger.log("image writers format " + defaultExtension); // debug
+                    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+                    ImageWriter writer = writers.next(); 
+                    // lossless compression
+                    ImageWriteParam iwp = writer.getDefaultWriteParam();
+                    if("jpg".equalsIgnoreCase(defaultExtension)) {
+                        Debugger.log("JPEG Lossless compression...");
+                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                        iwp.setCompressionType("JPEG-LS");
+//                        iwp.setCompressionType();
+                    }
+                    writer.setOutput(ios);
+                    writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
+                        @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
+                        // Only this method is used to send progress to task
+                        @Override public void imageProgress(ImageWriter source, float percentageDone) { updateProgress(percentageDone, 100); }
+                        @Override public void imageComplete(ImageWriter source) {}
+                        @Override public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
+                        @Override public void thumbnailProgress(ImageWriter source, float percentageDone) {}
+                        @Override public void thumbnailComplete(ImageWriter source) {}
+                        @Override public void writeAborted(ImageWriter source) {}
+                    });
+                    writer.write(bufferedImage);
+//                    writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
+                    Debugger.log("disposing write sequence");
+                    writer.dispose();
+                }
+                return null;
+            }
+        };
+    }
 
     public void takeWork(BufferedImage bi, File file){
         Task<Void> task = createOutputWorker(bi, fixDefaultExtension(file));

@@ -19,34 +19,16 @@ package org.bluecipherz.certificatemaker;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.event.EventType;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
-import javax.xml.bind.UnmarshalException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.ValidationEvent;
+import javax.xml.bind.ValidationEventHandler;
 
 /*
  * To change this template, choose Tools | Templates
@@ -66,10 +48,11 @@ public class CertificateUtils {
      * @param node
      * @return
      */
+    @Deprecated
     public CertificateField convertToCertificateField(Node node) {
-        CertificateText text = (CertificateText) node;
-        int x = (int) text.getX();
-        int y = (int) text.getY();
+//        CertificateText text = (CertificateText) node;
+//        int x = (int) text.getX();
+//        int y = (int) text.getY();
 //        Font font = text.getFont();
 //        int fontSize = (int) font.getSize(); // TODO do something
 //        String fontFamily = font.getFamily();
@@ -77,8 +60,8 @@ public class CertificateUtils {
 //        int fontStyle = (FontWeight.BOLD.toString().equalsIgnoreCase(fontWeight)) ? java.awt.Font.BOLD : java.awt.Font.PLAIN;
         
         // NEWLY CALCULATE MIDDLE AND ALIGN SHIT
-        int middlex = (int) (x + text.getLayoutBounds().getWidth() / 2);
-        int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
+//        int middlex = (int) (x + text.getLayoutBounds().getWidth() / 2);
+//        int middley = (int) (y + text.getLayoutBounds().getHeight() / 2);
         
 //        CertificateField field = new CertificateField(middlex, y);  // redundant
 //        CertificateField field = text.getCertificateField();
@@ -103,6 +86,7 @@ public class CertificateUtils {
         return null;
     }
     
+    @Deprecated
     public CertificateField convertToCertificateImage(Node node) {
         ImageView imageView = (ImageView) node;
         int x = (int) imageView.getX();
@@ -116,11 +100,12 @@ public class CertificateUtils {
 //            int middley = (int) (y + imageView.getImage().getHeight() / 2);
             
 //            CertificateField field = new CertificateField(middlex, middley);
-            CertificateField field = new CertificateField(x, y);
-            field.setWidth((int) imageView.getImage().getWidth());
-            field.setHeight((int) imageView.getImage().getHeight());
-            field.setFieldType(FieldType.IMAGE);
-            return field;
+//            CertificateField field = new CertificateField(x, y);
+//            field.setWidth((int) imageView.getImage().getWidth());
+//            field.setHeight((int) imageView.getImage().getHeight());
+//            field.setFieldType(FieldType.IMAGE);
+//            return field;
+            return null; // ugh
         } else {
             return null;
         }
@@ -132,20 +117,21 @@ public class CertificateUtils {
      * @param group
      * @return
      */
+    @Deprecated
     public ArrayList<CertificateField> populateCertificateFields(Group group) {
         ArrayList<CertificateField> certificateFieldList = new ArrayList<>();
-        for (Node node : group.getChildren()) {
-            if (node instanceof CertificateText) {
-//                CertificateText text = (CertificateText) node;
-//                certificateFieldList.add(text.getCertificateField()); // new fix, but this wont work, need alignment
-                certificateFieldList.add(convertToCertificateField(node)); // fixed, courses
-            } else if(node instanceof ImageView) {
-                CertificateField field = convertToCertificateImage(node); // this returns null for the main certificate image
-                if(field != null) {
-                    certificateFieldList.add(field);
-                }
-            }
-        }
+//        for (Node node : group.getChildren()) {
+//            if (node instanceof CertificateText) {
+////                CertificateText text = (CertificateText) node;
+////                certificateFieldList.add(text.getCertificateField()); // new fix, but this wont work, need alignment
+//                certificateFieldList.add(convertToCertificateField(node)); // fixed, courses
+//            } else if(node instanceof ImageView) {
+//                CertificateField field = convertToCertificateImage(node); // this returns null for the main certificate image
+//                if(field != null) {
+//                    certificateFieldList.add(field);
+//                }
+//            }
+//        }
         return certificateFieldList;
     }
 
@@ -156,10 +142,11 @@ public class CertificateUtils {
      * @param imagePath
      * @return 
      */
-    public CertificateWrapper createDummyWrapper(String name, String imagePath) {
-        CertificateWrapper certificateWrapper = new CertificateWrapper();
-        certificateWrapper.setName(name); // used as tab name and save name
-        certificateWrapper.setCertificateImage(new File(imagePath));
+    public CertificateWrapper createEmptyWrapper(String name, String imagePath) {
+        Debugger.log("[CertificateUtils] Creating empty wrapper..."); // debug
+        CertificateWrapper wrapper = new CertificateWrapper();
+        wrapper.setName(name); // used as tab name and save name
+        wrapper.setCertificateImage(new File(imagePath));
         ArrayList<CertificateField> fields = new ArrayList<>();
 //        ObservableList<CertificateField> fields = FXCollections.observableArrayList();
 //        fields.addListener(new ListChangeListener<CertificateField>() {
@@ -168,8 +155,8 @@ public class CertificateUtils {
 //                Debugger.log("wrapper list changed : current size " + change.getList().size());
 //            }
 //        });
-        certificateWrapper.setCertificateFields(fields);
-        return certificateWrapper;
+        wrapper.setCertificateFields(fields);
+        return wrapper;
     }
     
     
@@ -181,12 +168,12 @@ public class CertificateUtils {
     public CertificateWrapper saveFileAtTab(CertificateTab tab, File file) {
 //        ScrollPane scrollPane = (ScrollPane) tab.getContent();
 //        Group group = (Group) scrollPane.getContent();
-        CertificateWrapper wrapper = tab.getUpdatedWrapper();
-        Debugger.log("retrieving wrapper : total contents " + wrapper.getCertificateFields().size());
+        CertificateWrapper wrapper = tab.getSerializableWrapper();
+        Debugger.log("[CertificateUtils] retrieving wrapper : total contents " + wrapper.getCertificateFields().size()); // debug
 //        ArrayList<CertificateField> certificateFieldList = populateCertificateFields(group);
 //        wrapper.setCertificateFields(certificateFieldList);
 //        Debugger.log("populated wrapper :\n" + wrapper); // very helpful debug
-        createCertificateFile(file, wrapper);
+        saveCertificateFile(file, wrapper);
 //        tab.setFile(file); // done at an upper level
         UserDataManager.setLastActivityPath(file);
         return wrapper;
@@ -199,18 +186,23 @@ public class CertificateUtils {
      */
     public CertificateWrapper openTemplate(File file) { // new implementation
         CertificateWrapper wrapper = null;
-        boolean fileOk = testFileIntegrity(file);
-        if(fileOk) {
-            try {
-                JAXBContext context = JAXBContext.newInstance(CertificateWrapper.class);
-                Unmarshaller um = context.createUnmarshaller();
-                if (file.exists()) {
-                    wrapper = (CertificateWrapper) um.unmarshal(file);
+        try {
+            JAXBContext context = JAXBContext.newInstance(CertificateWrapper.class);
+            Unmarshaller um = context.createUnmarshaller();
+            // new debug
+            um.setEventHandler(new ValidationEventHandler() {
+                @Override
+                public boolean handleEvent(ValidationEvent event) {
+                    throw new RuntimeException(event.getMessage(), event.getLinkedException());
                 }
-                Debugger.log("Unmarshalling...\n" + wrapper); // IMPORTANT debug
-            } catch (JAXBException e) {
-                e.printStackTrace();
+            });
+            if (file.exists()) {
+                wrapper = (CertificateWrapper) um.unmarshal(file);
             }
+            Debugger.log("[CertificateUtils] unmarshalling file + " + file.getAbsolutePath() 
+                    + "...\n" + wrapper); // IMPORTANT debug, update : VERY IMPORTANT!~
+        } catch (JAXBException e) {
+            e.printStackTrace();
         }
         return wrapper;
     }
@@ -220,7 +212,7 @@ public class CertificateUtils {
      * @param file
      * @param wrapper
      */
-    public void createCertificateFile(File file, CertificateWrapper wrapper) {
+    public void saveCertificateFile(File file, CertificateWrapper wrapper) {
         try {
             JAXBContext context = JAXBContext.newInstance(CertificateWrapper.class);
             Marshaller m = context.createMarshaller();
@@ -231,19 +223,7 @@ public class CertificateUtils {
             e.printStackTrace();
         }
     }
-        
-    /**
-     * used to check the xml file for issues.
-     * @param file 
-     */
-    public boolean testFileIntegrity(File file) {
-        if(file != null){
-            if(file.isFile()){
-                // TODO not yet implemented
-            }
-        }
-        return true;
-    }
+    
     
     /**
      * checks for the extension of the file and corrects.
@@ -260,18 +240,6 @@ public class CertificateUtils {
             }
             return new File(path);
         } else return null; // new null pointer fix
-    }
-    
-    public Task createWorker() {
-        return new Task() {
-
-            @Override
-            protected Object call() throws Exception {
-                // 
-                return true;
-            }
-            
-        };
     }
     
     /********* END LOW LEVEL METHODS *********/
@@ -310,6 +278,14 @@ public class CertificateUtils {
         FileChooser.ExtensionFilter extensionFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
         fileChooser.getExtensionFilters().add(extensionFilter);
         return fileChooser;
+    }
+    
+    public boolean isImageFile(File file) {
+        if(!file.isFile()) return false;
+        if(!file.canRead()) return false;
+        String path = file.getAbsolutePath();
+        if(!path.endsWith(".jpg") || !path.endsWith(".png")) return false;
+        return true;
     }
     
 }

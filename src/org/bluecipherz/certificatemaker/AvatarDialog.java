@@ -1,5 +1,4 @@
 /*
- * Copyright BCZ Inc. 2015.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -23,15 +22,12 @@ import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -59,7 +55,7 @@ public class AvatarDialog extends Stage {
     
     private Button okButton;
     
-    private ImageView prevImage;
+    private CertificateAvatar subjectImage;
     
     EventHandler<ActionEvent> newaction = new EventHandler<ActionEvent>() {
         @Override
@@ -70,9 +66,9 @@ public class AvatarDialog extends Stage {
                     int height = Integer.parseInt(heightField.getText());
                     if(width > 0 && height > 0) {
                         CertificateField field = generateCertificateField(imageX, imageY, width, height);
-                        ImageView image = tab.createAvatarImage(field);
-                        tab.addNewImage(image, field);
-                        tab.setAvatarFieldAdded(true);
+                        subjectImage = tab.createAvatarImage(field);
+                        AddCommand command = new AddCommand(subjectImage, tab);
+                        tab.getCommandManager().add(command);
                         close();
                     } // else give positive number
                 } catch(NumberFormatException ex) {
@@ -88,11 +84,12 @@ public class AvatarDialog extends Stage {
         @Override
         public void handle(ActionEvent t) {
             if(!"".equals(widthField.getText()) || !"".equals(heightField.getText())) {
-                int width = Integer.parseInt(widthField.getText());
-                int height = Integer.parseInt(heightField.getText());
+                Integer width = Integer.parseInt(widthField.getText());
+                Integer height = Integer.parseInt(heightField.getText());
                 if(width > 0 && height > 0) {
-                    Image image = tab.createImage(width, height);
-                    prevImage.setImage(image);
+                    CertificateField changes = new CertificateField(imageX, imageY, FieldType.IMAGE, width, height);
+                    EditCommand command = new EditCommand(subjectImage, changes);
+                    tab.getCommandManager().add(command);
                     close();
                 } // else give positive number
             } else {
@@ -161,12 +158,12 @@ public class AvatarDialog extends Stage {
         this.tab = imageHolder;
     }
     
-    public void editImage(ImageView imageView) {
-        this.prevImage = imageView;
-        imageX = (int) imageView.getX();
-        imageY = (int) imageView.getY();
-        String w = String.valueOf((int)prevImage.getImage().getWidth());
-        String h = String.valueOf((int)prevImage.getImage().getHeight());
+    public void editImage(CertificateAvatar avatarImage) {
+        this.subjectImage = avatarImage;
+        imageX = (int) avatarImage.getX();
+        imageY = (int) avatarImage.getY();
+        String w = String.valueOf(subjectImage.getWidth());
+        String h = String.valueOf(subjectImage.getHeight());
         widthField.setText(w);
         heightField.setText(h);
         okButton.setOnAction(editaction);
@@ -192,20 +189,19 @@ public class AvatarDialog extends Stage {
     public void newImage(Point2D point, int width, int height) {
         imageX = (int) point.getX();
         imageY = (int) point.getY();
-        Debugger.log("adding image : x" + imageX + ", y" + imageY + ", widht" + width + ", height" + height);
+        Debugger.log("[AvatarDialog] adding image : x" + imageX + ", y" + imageY + ", widht" + width + ", height" + height);
 //        if(!imageHolder.isAvatarFieldAdded()) { // done at an upper level
             CertificateField field = generateCertificateField(imageX, imageY, width, height);
-            ImageView image = tab.createAvatarImage(field);
-            tab.addNewImage(image, field);
-            tab.setAvatarFieldAdded(true);
+            CertificateAvatar image = tab.createAvatarImage(field);
+            AddCommand command = new AddCommand(image, tab);
+            tab.getCommandManager().add(command);
 //        }
     }
     
     public CertificateField generateCertificateField(int x, int y, int width, int height) {
-        CertificateField field = new CertificateField(x, y);
-        field.setFieldType(FieldType.IMAGE);
-        field.setWidth(width);
-        field.setHeight(height);
+        Integer _width = width; // new property implemetation
+        Integer _height = height; // new property implemetation
+        CertificateField field = new CertificateField(x, y, FieldType.IMAGE, _width, _height);
         return field;
     }
     

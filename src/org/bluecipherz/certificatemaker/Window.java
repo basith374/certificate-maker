@@ -1,5 +1,4 @@
 /*
- * Copyright BCZ Inc. 2015.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -39,7 +38,10 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -53,23 +55,28 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javax.xml.bind.UnmarshalException;
-import org.apache.log4j.Logger;
 
 /**
  * This class is the main thing with over 1k LOC. technically speaking. however i think there are more comments than
  * code. Im thinking of breaking this apart into smaller pieces but not until this thing does what it says it
- * does. Feel free to do it if want to. :)
+ * does. Feel free to do it if want to. :), NEW UPDATE : have broken it into several small pieces but it still
+ * can be broken further.
  * Created by bazi on 22/3/15.
  */
 public class Window  {
 
+    /*
+     * GLOBAL CONSTANTS
+     */
     private static final int DEFAULT_WIDTH = 800;
     private static final int DEFAULT_HEIGHT = 500;
+    private static final String COMPANY_NAME = "BCZ";
+    private static final String APP_NAME = "Certificate Maker";
 
     private static Stage PRIMARY_STAGE;
     
     /*
-     * ALLOW ONLY ONE INSTANCE OF DIALOG BOXES, HENCE STATIC
+     * ALLOW ONLY ONE INSTANCE OF DIALOG BOXES
      */
     private static NewTemplateDialog NEWTEMPLATE_DIALOG;
     private static LabelDialog LABEL_DIALOG;
@@ -78,16 +85,24 @@ public class Window  {
     private static AboutDialog ABOUT_DIALOG;
     private static LoadingBox LOADINGBOX;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
+    private static FieldsDialog FIELDS_DIALOG;
     
+    /*
+     * MAIN WINDOW GUI COMPONENTS
+     */
     private BorderPane borderPane;
     private static TabPane tabPane;
+    
+    /*
+     * A SMALL OVERHEAD ADDED BY THE TERM 'OBJECT COMPOSITION OVER CLASS INHERITANCE'
+     */
+    public static HashMap<Tab, CertificateTab> tabMap = new HashMap<>();
     
     // getters only
     private ObservableList<String> fontFamilyList; // System specific
     private ObservableList<String> fontStyleList;
     private ObservableList<Integer> fontSizeList;
     
-    private ComboBox recentTemplatesBox; // recent templates holder
     private CertificateUtils certificateUtils;
     
     private ProgressBar progressBar;
@@ -95,8 +110,22 @@ public class Window  {
     private HBox statusBar;
     private Label messageLabel;
 //    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
-    
-    final static Logger logger = Logger.getLogger(Window.class);
+    private Menu openRecentMenu;
+
+    private void saveRecent(File file) {
+        MenuItem item = new MenuItem(file.getAbsolutePath());
+        String path = file.getAbsolutePath();
+        boolean contains = false;
+        for(MenuItem _item : openRecentMenu.getItems()){
+            if(path.equals(_item.getText())) contains = true;
+        }
+        if(!contains) {
+            openRecentMenu.getItems().add(item);
+            Debugger.log("[Window] adding item to openRecentMenu : " + file.getAbsolutePath()); // debug
+        } else {
+            Debugger.log("[Window] item already in openRecentMenu : " + file.getAbsolutePath()); // debug
+        }
+    }
 
     private enum DIALOG_TYPE {
         OPEN,
@@ -211,26 +240,26 @@ public class Window  {
                 ToggleButton button = (ToggleButton) event.getSource();
                 if (button1.equals(button)) { // MOVE
                     MOUSEMODE = MODE_MOVE;
-                    setCursorIconForAllTextAtAllTab(Cursor.MOVE); // revert
-                    resetCursorIconForAllTab();
+//                    setCursorIconForAllTextAtAllTab(Cursor.MOVE); // revert
+//                    resetCursorIconForAllTab();
                 } else if(button2.equals(button)) { // ADD IMAGE
                     MOUSEMODE = MODE_ADDIMAGE;
-                    setCursorIconForAllTab(Cursor.CROSSHAIR);
-                    setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR);
+//                    setCursorIconForAllTab(Cursor.CROSSHAIR);
+//                    setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR);
                 } else if(button3.equals(button)) { // ADD TEXT
                     MOUSEMODE = MODE_ADD;
-                    setCursorIconForAllTab(Cursor.CROSSHAIR);
-                    setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR); // TODO remove moving capability while MODE = ADD
+//                    setCursorIconForAllTab(Cursor.CROSSHAIR);
+//                    setCursorIconForAllTextAtAllTab(Cursor.CROSSHAIR); // TODO remove moving capability while MODE = ADD
                 } else if(button4.equals(button)) { // DELETE
                     MOUSEMODE = MODE_DELETE;
                     // TODO IMPORTANT set entry deletion mouse cursor
 //                    setCursorIconForAllTextAtAllTab(Cursor.cursor(""));  // revert
-                    setCursorIconForAllTextAtAllTab(new ImageCursor(ResourceManger.getInstance().crossx1));
-                    resetCursorIconForAllTab();
+//                    setCursorIconForAllTextAtAllTab(new ImageCursor(ResourceManger.getInstance().crossx1));
+//                    resetCursorIconForAllTab();
                 } else if(button5.equals(button)) { // EDIT
                     MOUSEMODE = MODE_EDIT;
-                    setCursorIconForAllTextAtAllTab(Cursor.TEXT);
-                    resetCursorIconForAllTab();
+//                    setCursorIconForAllTextAtAllTab(Cursor.TEXT);
+//                    resetCursorIconForAllTab();
                 }
             }
         };
@@ -292,7 +321,7 @@ public class Window  {
         MenuItem newMenu = new MenuItem("New Template");
         MenuItem newCertificateMenu = new MenuItem("New Certificate");
         MenuItem openMenu = new MenuItem("Open Template");
-        final Menu openRecentMenu = new Menu("Open Recent");
+        openRecentMenu = new Menu("Open Recent");
         MenuItem saveMenu = new MenuItem("Save Template");
         MenuItem saveAsMenu = new MenuItem("Save As Template");
         MenuItem exitMenu = new MenuItem("Exit");
@@ -304,8 +333,8 @@ public class Window  {
         openRecentMenu.setMnemonicParsing(true);
         saveMenu.setMnemonicParsing(true);
         saveAsMenu.setMnemonicParsing(true);
-        exitMenu.setMnemonicParsing(true);
-
+        exitMenu.setMnemonicParsing(true);        
+        
         fileMenu.getItems().addAll(
                 newCertificateMenu,
                 new SeparatorMenuItem(),
@@ -317,14 +346,14 @@ public class Window  {
                 exitMenu
         );
         
-        EventHandler<ActionEvent> handler = getMenuEventHandler();
+        EventHandler<ActionEvent> menuhandler = getMenuEventHandler();
         // action listeners
-        newMenu.setOnAction(handler);
-        newCertificateMenu.setOnAction(handler);
-        openMenu.setOnAction(handler);
-        saveMenu.setOnAction(handler);
-        saveAsMenu.setOnAction(handler);
-        exitMenu.setOnAction(handler);
+        newMenu.setOnAction(menuhandler);
+        newCertificateMenu.setOnAction(menuhandler);
+        openMenu.setOnAction(menuhandler);
+        saveMenu.setOnAction(menuhandler);
+        saveAsMenu.setOnAction(menuhandler);
+        exitMenu.setOnAction(menuhandler);
         // icons
         newMenu.setGraphic(new ImageView(ResourceManger.getInstance().newtempx16));
         newCertificateMenu.setGraphic(new ImageView(ResourceManger.getInstance().newx16));
@@ -346,7 +375,7 @@ public class Window  {
             public void handle(ActionEvent t) {
                 MenuItem source = (MenuItem) t.getSource();
                 File file = new File(source.getText());
-                Debugger.log(file.getAbsolutePath()); // debug
+                Debugger.log("[Window] Opening file : " + file.getAbsolutePath()); // debug
                 if(file.exists()) {
                     int index = getTabIndex(file);
                     if(index == -1) {
@@ -361,16 +390,16 @@ public class Window  {
                 }
             }
         };
-        List<String> recent = UserDataManager.getRecentTemplates();
+        List<String> recent = UserDataManager.getRecentTemplates(); // TODO make global
         if(recent != null) {
-//            Debugger.log("Loading recent templates"); // debug
+            Debugger.log("[Window] Loading recent templates"); // debug
             for(String path : recent) {
                 MenuItem recentMenu = new MenuItem(path);
                 recentMenu.setOnAction(recentHandler);
                 openRecentMenu.getItems().add(recentMenu);
             }
         } else {
-            Debugger.log("No recent templates"); // debug
+            Debugger.log("[Window] No recent templates"); // debug
             MenuItem empty = new MenuItem("No recent files");
             empty.setDisable(true);
             openRecentMenu.getItems().add(empty);
@@ -394,6 +423,7 @@ public class Window  {
         
         final MenuItem undoMenu = new MenuItem("Undo");
         final MenuItem redoMenu = new MenuItem("Redo");
+        MenuItem fieldsMenu = new MenuItem("Fields");
         
         
         undoMenu.setAccelerator(new KeyCodeCombination(KeyCode.Z, KeyCombination.CONTROL_DOWN));
@@ -402,25 +432,30 @@ public class Window  {
         EventHandler<ActionEvent> a = new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
-                CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+                Tab tab = tabPane.getSelectionModel().getSelectedItem();
+                CertificateTab ct = tabMap.get(tab);
                 MenuItem source = (MenuItem) t.getSource();
-                if(tab != null) {
-                    CommandManager manager = tab.getCommandManager();
+                if(ct != null) {
+                    CommandManager manager = ct.getCommandManager();
                     if(source.equals(undoMenu)) {
-                        Debugger.log("undoing");
-                        manager.undoLast();
+//                        Debugger.log("undoing");
+                        manager.undo();
                     } else {
                         // redo
-                        Debugger.log("redoing");
-                        manager.redoLast();
+//                        Debugger.log("redoing");
+                        manager.redo();
                     }
+                } else {
+                    Debugger.log("certificate tab is null");
                 }
             }
         };
         undoMenu.setOnAction(a);
         redoMenu.setOnAction(a);
+        fieldsMenu.setOnAction(menuhandler);
         
-        editMenu.getItems().addAll(undoMenu, redoMenu);
+        editMenu.getItems().addAll(undoMenu, redoMenu); // removed fields menu
+//        editMenu.getItems().addAll(undoMenu, redoMenu, new SeparatorMenuItem(), fieldsMenu);
         menuBar.getMenus().add(editMenu);
         
         // OUTPUT MENU
@@ -445,9 +480,9 @@ public class Window  {
         }
         
         
-        a3outputMenu.setOnAction(handler);
-        jpgMenu.setOnAction(handler);
-        pngMenu.setOnAction(handler);
+        a3outputMenu.setOnAction(menuhandler);
+        jpgMenu.setOnAction(menuhandler);
+        pngMenu.setOnAction(menuhandler);
         
         outputMenu.getItems().add(a3outputMenu);
         outputMenu.getItems().add(new SeparatorMenuItem());
@@ -462,7 +497,7 @@ public class Window  {
         MenuItem aboutMenu = new MenuItem("About");
         aboutMenu.setGraphic(new ImageView(ResourceManger.getInstance().iconx16));
         helpMenu.getItems().add(aboutMenu);
-        aboutMenu.setOnAction(handler);
+        aboutMenu.setOnAction(menuhandler);
         
         menuBar.getMenus().add(helpMenu);
 
@@ -530,6 +565,17 @@ public class Window  {
                     UserDataManager.setDefaultImageFormat("jpg");
                 } else if("png format".equalsIgnoreCase(action)) {
                     UserDataManager.setDefaultImageFormat("png");
+                } else if("fields".equalsIgnoreCase(action)) {
+                    if(FIELDS_DIALOG == null) {
+                        FIELDS_DIALOG = new FieldsDialog(PRIMARY_STAGE);
+                    }
+                    Tab tab = tabPane.getSelectionModel().getSelectedItem();
+                    CertificateTab ct = tabMap.get(tab);
+                    if(ct != null) {
+                        FIELDS_DIALOG.showDialog(ct.createNodeList());
+                    } else {
+                        Debugger.log("tab is null...");
+                    }
                 }
             }
         };
@@ -576,51 +622,6 @@ public class Window  {
 
         ToolBar toolBar = new ToolBar();
 
-
-        Label recentTemplatesLbl = new Label("Recent templates :");
-//        toolBar.getItems().add(recentTemplatesLbl);
-        
-        List<String> recent = UserDataManager.getRecentTemplates();
-//        ObservableList<String> recentFiles = FXCollections.observableArrayList(UserDataManager.getRecentTemplates()); // null pointer
-        // fetch recent files and add them to the combobox
-        if(recent != null) {
-            Debugger.log("Loading recent templates"); // debug
-            recentTemplatesBox = new ComboBox(FXCollections.observableArrayList(recent));
-        } else {
-            Debugger.log("No recent templates"); // debug
-            recentTemplatesBox = new ComboBox();
-        }
-//        final ComboBox recentTemplatesBox = new ComboBox(getRecentTemplates()); // null pointer
-        recentTemplatesBox.setOnAction(new EventHandler() {
-            @Override
-            public void handle(Event t) {
-                Debugger.log("recent box selected"); // debug
-                File file = new File(((ComboBox)t.getSource()).getSelectionModel().getSelectedItem().toString());
-                Debugger.log("File : " + file.getAbsolutePath()); // debug
-                if(!isOpenedInGui(file))
-                    if(file.exists()) {
-                        openTemplateInGui(file);
-                        tabPane.getSelectionModel().select(getTabIndex(file));
-                    } else {
-                        Debugger.log("file doesnt exists. removing entry..."); // debug
-                        ((ComboBox)t.getSource()).getItems().remove(file.getAbsolutePath());
-                    }
-                else
-                    // select tab containing file if not selected
-                    tabPane.getSelectionModel().select(getTabIndex(file));
-            }
-        });
-        // event listeners for automatic data update
-        recentTemplatesBox.getItems().addListener(new ListChangeListener() {
-            @Override
-            public void onChanged(ListChangeListener.Change change) {
-                Debugger.log("recent items updated"); // debug
-                UserDataManager.setRecentTemplates(change.getList());
-            }
-        });
-        if(!recentTemplatesBox.getItems().contains("")) recentTemplatesBox.getItems().add(0, "");
-//        toolBar.getItems().add(recentTemplatesBox);
-
         Button newCertificateBtn = new Button("New Certificate", new ImageView(ResourceManger.getInstance().newx16));
         toolBar.getItems().add(newCertificateBtn);
         newCertificateBtn.setOnAction(new EventHandler<ActionEvent>() {
@@ -649,7 +650,7 @@ public class Window  {
 //                String fontFamily = UserDataManager.getDefaultFontFamily();
                 String fontFamily = UserDataManager.getDefaultFontFamily();
                 if(fontFamily != null) {
-                    if(systemFonts.getItems().contains(this)) systemFonts.getSelectionModel().select(fontFamily);
+                    if(systemFonts.getItems().contains(fontFamily)) systemFonts.getSelectionModel().select(fontFamily);
                     else systemFonts.getSelectionModel().select(0);
                 } else {
                     systemFonts.getSelectionModel().select(0);
@@ -785,57 +786,57 @@ public class Window  {
     }
     
     /*** cursor related methods ***/
-    private void setCursorIconForAllTextAtTab(Tab tab, Cursor imageCursor) {
-        Group group = ((CertificateTab)tab).getFieldContainer();
-        for (Node node : group.getChildren()) {
-            if (node instanceof CertificateText) {
-                node.setCursor(imageCursor);
-            }
-        }
-    }
+//    private void setCursorIconForAllTextAtTab(Tab tab, Cursor imageCursor) {
+//        Group group = ((CertificateTab)tab).getFieldContainer();
+//        for (Node node : group.getChildren()) {
+//            if (node instanceof CertificateText) {
+//                node.setCursor(imageCursor);
+//            }
+//        }
+//    }
+//
+//    private void setCursorIconForTab(Tab tab, Cursor cursor) {
+//        Group group = ((CertificateTab)tab).getFieldContainer();
+//        group.setCursor(Cursor.CROSSHAIR);
+//    }
 
-    private void setCursorIconForTab(Tab tab, Cursor cursor) {
-        Group group = ((CertificateTab)tab).getFieldContainer();
-        group.setCursor(Cursor.CROSSHAIR);
-    }
+//    private void setCursorIconForAllTextAtAllTab(Cursor cursor) {
+//        for (Tab tab : tabPane.getTabs()) {
+//            setCursorIconForAllTextAtTab(tab, cursor);
+//        }
+//    }
+//
+//    private void setCursorIconForAllTab(Cursor cursor) {
+//        for (Tab tab : tabPane.getTabs()) {
+//            setCursorIconForTab(tab, cursor);
+//        }
+//    }
+//
+//    private void resetCursorIconForAllTextAtTab(Tab tab) {
+//        Group group = ((CertificateTab)tab).getFieldContainer();
+//        for (Node node : group.getChildren()) {
+//            if (node instanceof CertificateText) {
+//                node.setCursor(Cursor.DEFAULT);
+//            }
+//        }
+//    }
+//
+//    private void resetCursorIconForTab(Tab tab) {
+//        Group group = ((CertificateTab)tab).getFieldContainer();
+//        group.setCursor(Cursor.DEFAULT);
+//    }
 
-    private void setCursorIconForAllTextAtAllTab(Cursor cursor) {
-        for (Tab tab : tabPane.getTabs()) {
-            setCursorIconForAllTextAtTab(tab, cursor);
-        }
-    }
-
-    private void setCursorIconForAllTab(Cursor cursor) {
-        for (Tab tab : tabPane.getTabs()) {
-            setCursorIconForTab(tab, cursor);
-        }
-    }
-
-    private void resetCursorIconForAllTextAtTab(Tab tab) {
-        Group group = ((CertificateTab)tab).getFieldContainer();
-        for (Node node : group.getChildren()) {
-            if (node instanceof CertificateText) {
-                node.setCursor(Cursor.DEFAULT);
-            }
-        }
-    }
-
-    private void resetCursorIconForTab(Tab tab) {
-        Group group = ((CertificateTab)tab).getFieldContainer();
-        group.setCursor(Cursor.DEFAULT);
-    }
-
-    private void resetCursorIconForAllTextAtAllTab() {
-        for (Tab tab : tabPane.getTabs()) {
-            resetCursorIconForAllTextAtTab(tab);
-        }
-    }
-
-    private void resetCursorIconForAllTab() {
-        for (Tab tab : tabPane.getTabs()) {
-            resetCursorIconForTab(tab);
-        }
-    }
+//    private void resetCursorIconForAllTextAtAllTab() {
+//        for (Tab tab : tabPane.getTabs()) {
+//            resetCursorIconForAllTextAtTab(tab);
+//        }
+//    }
+//
+//    private void resetCursorIconForAllTab() {
+//        for (Tab tab : tabPane.getTabs()) {
+//            resetCursorIconForTab(tab);
+//        }
+//    }
     // end cursor methods
     
     
@@ -860,17 +861,19 @@ public class Window  {
      */
     private void saveFile(Stage stage) {
 //        CertificateWrapper wrapper = certificateList.get(index);
-        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+        Tab tab = tabPane.getSelectionModel().getSelectedItem();
+        CertificateTab ct = tabMap.get(tab);
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1) {// do the rest
-            if (tab.getFile() == null) {
+            if (ct.getFile() == null) {
                 File file = getFileByDialog(stage, DIALOG_TYPE.SAVE, "Save template");
-                certificateUtils.saveFileAtTab(tab, file);
-                tab.setFile(file); // TODO change filepath to tabs
-                if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
+                certificateUtils.saveFileAtTab(ct, file);
+                ct.setFile(file); // TODO change filepath to tabs
+                // TODO save recent
+                saveRecent(file);
             } else {
-                Debugger.log("Saving file : " + tab.getFile().getAbsolutePath()); // DEBUG
-                certificateUtils.saveFileAtTab(tab, tab.getFile());
+                Debugger.log("Saving file : " + ct.getFile().getAbsolutePath()); // DEBUG
+                certificateUtils.saveFileAtTab(ct, ct.getFile());
             }
         } else {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "Nothing to save");
@@ -883,11 +886,12 @@ public class Window  {
      * @param index
      */
     private void saveAsFile(Stage stage) {
-        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
+        Tab tab = tabPane.getSelectionModel().getSelectedItem();
+        CertificateTab ct = tabMap.get(tab);
         int index = tabPane.getSelectionModel().getSelectedIndex();
         if(index != -1){
             File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.SAVE, "Save template");
-            certificateUtils.saveFileAtTab(tab, file);
+            certificateUtils.saveFileAtTab(ct, file);
         } else {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "Nothing to save");
         }
@@ -941,8 +945,8 @@ public class Window  {
      */
     private CertificateTab openTemplateInGui(File file) {
         try {
-            if(!recentTemplatesBox.getItems().contains(file.getAbsolutePath())) recentTemplatesBox.getItems().add(file.getAbsolutePath()); // save recent
-
+            // TODO save recent
+            saveRecent(file);
             CertificateTab tab = createNewTab(file);
             // save the file path to the registry
             UserDataManager.setLastActivityPath(file);
@@ -955,8 +959,8 @@ public class Window  {
         }catch (OutOfMemoryError ex) {
             Alert.showAlertError(PRIMARY_STAGE, "Error", "The image file size is too much");
         } catch (Exception ex) {
-//            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex); // java.util.logging
-            logger.error("Something's wrong", ex);
+            Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex); // java.util.logging
+//            Alert.showAlertError(PRIMARY_STAGE, "Error", "An unknown error occured. Please contact BCZ.");
             Alert.showAlertError(PRIMARY_STAGE, "Error", ex.toString());
         }
         return null;
@@ -967,7 +971,8 @@ public class Window  {
     public boolean isOpenedInGui(File file) {
         boolean opened = false;
         for(Tab tab : tabPane.getTabs()) {
-            File openedFile = ((CertificateTab)tab).getFile();
+            CertificateTab ct = tabMap.get(tab);
+            File openedFile = ct.getFile();
             if(openedFile.equals(file)) opened = true;
         }
         return opened;
@@ -976,8 +981,9 @@ public class Window  {
     private int getTabIndex(File file) {
         int index = -1;
         for(Tab tab : tabPane.getTabs()) {
-            File file2 = ((CertificateTab)tab).getFile();
-            if(file.equals(file2)) index = tabPane.getTabs().indexOf(tab);
+            CertificateTab ct = tabMap.get(tab);
+            File _file = ct.getFile();
+            if(file.equals(_file)) index = tabPane.getTabs().indexOf(tab);
         }
         return index;
     }
@@ -991,28 +997,16 @@ public class Window  {
             return true;
         } else {
             CertificateTab tab = openTemplateInGui(file);
-            tabPane.getSelectionModel().select(tab);
+            tabPane.getSelectionModel().select(tab.get());
             openCreateCertificateDialog();
             return false;
         }
     }
     
-    public void openCreateCertificateDialog() {
-        CertificateTab tab = (CertificateTab) tabPane.getSelectionModel().getSelectedItem();
-        if(tab != null){
-            CertificateWrapper wrapper = tab.getUpdatedWrapper();
-            if(CREATECERTIFICATE_DIALOG == null) {
-                CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
-            }
-//            LOADINGBOX.showProgressing(CREATECERTIFICATE_DIALOG.populatingProgressProperty());
-            CREATECERTIFICATE_DIALOG.openFor(wrapper);
-        } else {
-            Debugger.log("unknown condition : tab index out of bounds"); // debug
-            Alert.showAlertError(PRIMARY_STAGE, "Error", "No opened templates");
-        }
-    }
-    
-    
+    public CertificateTab getSelectedTab() {
+        Tab tab = tabPane.getSelectionModel().getSelectedItem();
+        return tabMap.get(tab);
+    }    
     
     /*************************
      * OTHER PUBLIC METHODS
@@ -1039,23 +1033,25 @@ public class Window  {
         // pass the unmarshaller wrapper to the tab
         CertificateTab tab = new CertificateTab(wrapper);
         LOADINGBOX.showProgressing(tab.loadImage()); // show progress indicator while loading image
-        tabPane.getTabs().add(tab); // add the tab to tabpane
+        tabPane.getTabs().add(tab.get()); // add the tab to tabpane
+        tabMap.put(tab.get(), tab); // new implementation
         tab.setFile(file); // for resaving file later
         return tab;
     }
     
-    public CertificateTab createNewTab(CertificateWrapper dummyWrapper) {
+    public CertificateTab createNewTab(CertificateWrapper wrapper) {
         if(CertificateTab.getPRIMARY_STAGE() == null) CertificateTab.setPRIMARY_STAGE(PRIMARY_STAGE);
         if(CertificateTab.getWINDOW() == null) CertificateTab.setWINDOW(this);
         //tab children heirarchy
         //tab -> scrollpane -> group -> imageview,text
-        CertificateTab tab = new CertificateTab(dummyWrapper);
+        CertificateTab tab = new CertificateTab(wrapper);
         LOADINGBOX.showProgressing(tab.loadImage());
-        tabPane.getTabs().add(tab);
+        tabPane.getTabs().add(tab.get());
+        tabMap.put(tab.get(), tab); // new implementation
         return tab;
     }
     
-    public void showEditAvatarDialog(CertificateTab tab, ImageView imageView) {
+    public void showEditAvatarDialog(CertificateTab tab, CertificateAvatar imageView) {
         if(AVATAR_DIALOG == null) {
             AVATAR_DIALOG = new AvatarDialog(PRIMARY_STAGE, Window.this);
         }
@@ -1100,6 +1096,25 @@ public class Window  {
         LABEL_DIALOG.prepareAndShowEditTextDialog(tab, text);
     }
 
+    
+    public void openCreateCertificateDialog() {
+        Tab tab = tabPane.getSelectionModel().getSelectedItem();
+        CertificateTab ct = tabMap.get(tab);
+        if(ct != null){
+//            CertificateWrapper wrapper = ct.getSerializableWrapper();
+            CertificateWrapper wrapper = ct.getDisplayableWrapper();
+            if(CREATECERTIFICATE_DIALOG == null) {
+                CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
+            }
+//            LOADINGBOX.showProgressing(CREATECERTIFICATE_DIALOG.populatingProgressProperty());
+            CREATECERTIFICATE_DIALOG.openFor(wrapper);
+        } else {
+            Debugger.log("[Window] unknown condition : tab index out of bounds"); // debug
+            Alert.showAlertError(PRIMARY_STAGE, "Error", "No opened templates");
+        }
+    }
+    
+    
 //    public static void main(String[] args) { launch(args); } // this was first the application class
     
 }

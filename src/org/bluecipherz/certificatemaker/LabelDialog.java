@@ -1,5 +1,4 @@
 /*
- * Copyright BCZ Inc. 2015.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -21,28 +20,21 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.VPos;
-import javafx.scene.Cursor;
 import javafx.scene.Group;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
@@ -51,9 +43,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -72,7 +61,7 @@ class LabelDialog extends Stage {
     private CertificateTab tab;
     
     private static final String NEW_TEXT = "Enter a name for the newly added field:";
-    private static final String EDIT_TEXT = "Edit the name of the selected field";
+    private static final String EDIT_TEXT = "Edit the attributes of the selected field";
     private final Label asklabel;
     private final Button button;
     private int newX;
@@ -99,6 +88,7 @@ class LabelDialog extends Stage {
     private Button addButton;
     private Button removeButton;
     private CertificateUtils certificateUtils;
+    private String previousText;
     
     private EventHandler<ActionEvent> listViewEventHandler = new EventHandler<ActionEvent>() {
         @Override
@@ -109,7 +99,6 @@ class LabelDialog extends Stage {
                 listView.getSelectionModel().selectLast();
                 animation.play();
             } else if(b.equals(removeButton)) {
-                Debugger.log("removing" + listView.getSelectionModel().getSelectedItem());
                 listView.getItems().remove(listView.getSelectionModel().getSelectedItem());
             }
         }
@@ -123,6 +112,7 @@ class LabelDialog extends Stage {
         @Override
         public void handle(KeyEvent t) {
             if(t.getCode() == KeyCode.ESCAPE) {
+                Debugger.log("[LabelDialog] ESC pressed"); // debug
                 close();
             }
         }
@@ -141,13 +131,15 @@ class LabelDialog extends Stage {
                 int x = (int) subjectText.getX();
                 int y = (int) subjectText.getY();
                 CertificateField field = generateCertificateField(x, y); // generate edited text
+                EditCommand command = new EditCommand(subjectText, field);
+                CertificateTab tab = subjectText.getContainer();
                 if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) {
                     if(!"".equalsIgnoreCase(textField.getText())) {
-                        subjectText.setAttributes(field);
+                        tab.getCommandManager().add(command);
                         close();
                     } else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
                 } else {
-                    subjectText.setAttributes(field);
+                    tab.getCommandManager().add(command);
                     close();
                 }
             }
@@ -156,29 +148,23 @@ class LabelDialog extends Stage {
             @Override
             public void handle(ActionEvent event) {
                 CertificateField field = generateCertificateField(newX, newY);
+                Debugger.log("[LabelDialog] generated field" + field); // debug
                 subjectText = tab.createText(field); // generate new text
-                
+                AddCommand command = new AddCommand(subjectText, tab);
 //                Debugger.log("Adding " + field.getFieldType().getName() + ", contents : " + (group.getChildren().size() - 1)); // debug
                 if(field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.ARRAY) {
                     if(!"".equalsIgnoreCase(subjectText.getText())) {
-                        tab.addNewText(subjectText, field);
+                        tab.getCommandManager().add(command);
                         close();
-                    }
-                    else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
+                    } else Alert.showAlertError(owner, "ERROR", "Field name must not be empty");
                 } else {
                     boolean entryisvalid = true;
                     if(field.getFieldType() == FieldType.DATE) if(tab.isDateFieldAdded()) entryisvalid = false;
                     if(field.getFieldType() == FieldType.REGNO) if(tab.isRegnoFieldAdded()) entryisvalid = false;
                     if(entryisvalid) {
-                        tab.addNewText(subjectText, field);
-                        // disallow multiple fields(single type)
-                        if(disallowmultiplefields) {
-                            if(field.getFieldType() == FieldType.DATE) tab.setDateFieldAdded(true);
-                            if(field.getFieldType() == FieldType.REGNO) tab.setRegnoFieldAdded(true);
-                        }
+                        tab.getCommandManager().add(command);
                         close();
-                    }
-                    else Alert.showAlertError(owner, "Error", field.getFieldType().toString() + " already added");
+                    } else Alert.showAlertError(owner, "Error", field.getFieldType().toString() + " already added");
                 }
             }
         };
@@ -215,14 +201,7 @@ class LabelDialog extends Stage {
         };
         Group root = new Group();
         Scene scene = new Scene(root, Color.WHITE);
-//        scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
-//            @Override
-//            public void handle(KeyEvent t) {
-//                if(t.getCode() == KeyCode.ESCAPE) {
-//                    close();
-//                }
-//            }
-//        });
+        scene.setOnKeyPressed(escaction); // close window on ESC press
         setScene(scene);
         gridPane = new GridPane();
         gridPane.setPadding(new Insets(10));
@@ -358,31 +337,20 @@ class LabelDialog extends Stage {
      */
     private CertificateField generateCertificateField(int x, int y) {
         // datas : x, y, fieldtype, fontfamily, fontsize, fontstyle, other conditions
-        CertificateField certificateField = new CertificateField(x, y);
-        // get and set field tpye
         String typestring = fieldTypeBox.getSelectionModel().getSelectedItem().toString().toUpperCase();
         FieldType field_type = FieldType.valueOf(typestring.replaceAll("\\s+", "")); // same thing at another place in this file
-        certificateField.setFieldType(field_type);
-        
-        // get font data
         String fontFamily = fontFamilyBox.getSelectionModel().getSelectedItem().toString();
-        int fontSize = Integer.valueOf(fontSizeBox.getSelectionModel().getSelectedItem().toString());
+        Integer fontSize = Integer.valueOf(fontSizeBox.getSelectionModel().getSelectedItem().toString());
         String fontStyle = fontStyleBox.getSelectionModel().getSelectedItem().toString();
-        // set font data
-        certificateField.setFontFamily(fontFamily);
-        certificateField.setFontSize(fontSize);
-        certificateField.setFontStyle(fontStyle);
         
-        // other conditions
         if(field_type == FieldType.TEXT) {
-            certificateField.setFieldName(textField.getText());
-            certificateField.setRepeating(repeatCheckBox.isSelected());
+            return new CertificateField(x, y, FieldType.TEXT, fontFamily, fontSize, fontStyle, textField.getText(), repeatCheckBox.isSelected());
+        } else if(field_type == FieldType.ARRAY) { // ARRAY
+            ObservableList<String> array = FXCollections.observableArrayList(listView.getItems()); // bug fix
+            return new CertificateField(x, y, FieldType.ARRAY, fontFamily, fontSize, fontStyle, textField.getText(), array);
+        } else {
+            return new CertificateField(x, y, field_type, fontFamily, fontSize, fontStyle);
         }
-        if(field_type == FieldType.ARRAY) {
-            certificateField.setFieldName(textField.getText());
-            certificateField.setArray(listView.getItems());
-        }
-        return certificateField;
     }
 
     public void prepareAndShowNewTextDialog(CertificateTab tab, Point2D point) {
@@ -410,11 +378,10 @@ class LabelDialog extends Stage {
         
         fieldTypeBox.getSelectionModel().select(TYPE);
         
-        fontFamilyBox.getSelectionModel().select(subjectText.getFont().getFamily()); // new 
+        fontFamilyBox.getSelectionModel().select(subjectText.getFontFamily()); // new 
 //        Debugger.log("" + (int) subjectText.getFont().getSize()); // debug
-        int size = (int) subjectText.getFont().getSize();
-        fontSizeBox.getSelectionModel().select(new Integer(size)); // avoid decimal, cast to int
-        fontStyleBox.getSelectionModel().select(subjectText.getFont().getStyle());
+        fontSizeBox.getSelectionModel().select(subjectText.getFontSize()); // avoid decimal, cast to int
+        fontStyleBox.getSelectionModel().select(subjectText.getFontStyle());
         
         if(TYPE == FieldType.TEXT) {
             textField.setText(subjectText.getText());

@@ -96,7 +96,7 @@ class NewTemplateDialog extends Stage {
                 String imagePath = imagePathFld.getText();
                 if (!"".equalsIgnoreCase(fileName) && !"".equalsIgnoreCase(imagePath)) {
                     close();
-                    final CertificateWrapper certificateWrapper = certificateUtils.createDummyWrapper(fileName, imagePath);
+                    final CertificateWrapper certificateWrapper = certificateUtils.createEmptyWrapper(fileName, imagePath);
 //                    newFileDialog.createNewTab(certificateWrapper).setFile(new File(fileName)); // create new tab and save path for later saving
                     Platform.runLater(new Runnable() {
                         @Override

@@ -17,49 +17,33 @@
  */
 package org.bluecipherz.certificatemaker;
 
-import com.sun.javafx.scene.KeyboardShortcutsHandler;
 import com.sun.javafx.scene.traversal.Direction;
-import java.awt.image.BufferedImage;
-import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Observable;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.prefs.Preferences;
 import javafx.application.Platform;
-import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
@@ -67,18 +51,13 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriter;
-import javax.imageio.event.IIOWriteProgressListener;
-import javax.imageio.stream.ImageOutputStream;
 
 /**
  * needs lots of work!, lots of redundant methods mainly changesubjecttext() & generatecertificatefield()
@@ -128,6 +107,7 @@ class CreateCertificateDialog extends Stage {
         
         regexUtils = new RegexUtils();
         certificateUtils = new CertificateUtils();
+        ImageUtils.setCu(certificateUtils);
         
         fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
@@ -142,6 +122,12 @@ class CreateCertificateDialog extends Stage {
                 }
             }
         });
+        dataHolders.addListener(new ListChangeListener<Node>() {
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Node> change) {
+                Debugger.log("Data holders changes : " + change.getList().size() + "list :" + change.getList()); // debug
+            }
+        });
 
         buttonAction = getButtonActions();
         nextButton = new Button("Next");
@@ -150,9 +136,13 @@ class CreateCertificateDialog extends Stage {
         finishButton = new Button("Finish");
         GridPane.setHalignment(finishButton, HPos.RIGHT);
         finishButton.setOnAction(buttonAction);
+        
+        finishButton.setMaxWidth(Double.MAX_VALUE);
     }
 
     public void openFor(final CertificateWrapper newWrapper) {
+        Debugger.log("[CreateCertificateDialog]Received Wrapper : " + newWrapper);
+        dataHolders.clear(); // bug fix
         iws.setDefaultExtension(UserDataManager.getDefaultImageFormat()); // update changes
         iws.setA3Output(UserDataManager.isA3Output()); // update changes
         if(newWrapper.getCertificateFields().size() > 0) {
@@ -169,18 +159,18 @@ class CreateCertificateDialog extends Stage {
             });
             // the real thing
             this.wrapper = newWrapper;
-            gridPane = createEntryFieldsandLabels(wrapper);
+            gridPane = createEntryFieldsandLabels(wrapper); // LOAD ALL STUFF
             iws.setCertificateImage(new Image(this.wrapper.getCertificateImage().toURI().toString()));
             scene.setRoot(gridPane);
             setScene(scene);
             sizeToScene();
             show();
-            populatingProgress.addListener(new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> ov, Number t, Number loaded) {
-                    Debugger.log("Populating " + loaded.doubleValue() * 100 + "%");
-                }
-            });
+//            populatingProgress.addListener(new ChangeListener<Number>() {
+//                @Override
+//                public void changed(ObservableValue<? extends Number> ov, Number t, Number loaded) {
+//                    Debugger.log("Populating " + loaded.doubleValue() * 100 + "%");
+//                }
+//            });
         } else {
             Alert.showAlertError(primaryStage, "Error", "There are no fields in this template");
         }
@@ -194,132 +184,74 @@ class CreateCertificateDialog extends Stage {
         
         Label savePathLabel = new Label("Save path : ");
         savePathField = new TextField();
+        savePathField.setOnKeyPressed(actionTraverse);
         savePathField.setPrefWidth(FIELD_WIDTH);
         Button savePathBtn = new Button("Browse...");
+        savePathBtn.setOnKeyPressed(actionTraverse);
         
         gridPane.add(savePathLabel, 0, 0); // col, rows
         gridPane.add(savePathField, 1, 0);
         gridPane.add(savePathBtn, 2, 0);
+        gridPane.add(new Separator(Orientation.HORIZONTAL), 0, 1, 3, 1);
         
         savePathBtn.setOnAction(getBrowseAction());
         
-        int row = 1;
-//        int lastcol = 1; // sometimes you dont need to add browse button if there is no image specified
-        
-//        HashMap<FieldType, CertificateField> collected = populateHashMap(wrapper);
-//        for(Map.Entry<FieldType, CertificateField> field : collected.entrySet()) {
-//            
-//        }
-//        for(int i=0;i<collected.size();i++) {
-//            Label label;
-//            if(collected.containsKey(FieldType.DATE)) {
-//                label = new Label("Date");
-//            } else if(collected.containsKey(FieldType.REGNO)) {
-//                label = new Label("Date");
-//            } else if(collected.containsKey(FieldType.COURSE)) {
-//                label = new Label("Date");
-//            } else if(collected.containsKey(FieldType.IMAGE)) {
-//                label = new Label("Date");
-//            } else if(collected.containsKey(FieldType.TEXT)) {
-//            }
-//        }
-//        ArrayList<CertificateField> certificateFields = orderFields(wrapper.getCertificateFields());
-        
+        int row = 2;
         /* start populating gui components according to wrapper*/
         Debugger.log("Populating fields");
         Collections.sort(wrapper.getCertificateFields()); // new sorting implementation
         Debugger.log("Sorting box components");
         for (CertificateField certificateField : wrapper.getCertificateFields()) {
-            Label label;
-            if(certificateField.getFieldType() == FieldType.TEXT || certificateField.getFieldType() == FieldType.ARRAY) {
-                label = new Label(certificateField.getFieldName() + " : ");
-                Debugger.log("Adding TEXT : " + certificateField.getFieldName());
-            } else {
-                label = new Label(certificateField.getFieldType().getName() + " : "); // new enum implementation
-//                label = new Label(certificateField.getFieldType().toString() + " : ");
-                Debugger.log("Adding " + certificateField.getFieldType().toString());
-            }
+            Label label = getSuitableLabel(certificateField);
             gridPane.add(label, 0, row);
-            
-            if (certificateField.getFieldType() == FieldType.IMAGE) {
-                avatarPathField = new TextField();
-                avatarPathField.setPrefWidth(FIELD_WIDTH);
-                gridPane.add(avatarPathField, 1, row);
-                dataHolders.add(avatarPathField); // save a copy for printing later
-                Button browseButton = getBrowseButton();
+
+            Node node = getSuitableComponent(certificateField);
+            // add browse button for image
+            if(certificateField.getFieldType() == FieldType.IMAGE) {
+                TextField tf = (TextField) node;
+                Button browseButton = getBrowseButton(tf);
+                browseButton.setOnKeyPressed(actionTraverse);
                 gridPane.add(browseButton, 2, row);
-                Debugger.log("Adding avatar path field for image at : " + certificateField.getX() + "," + certificateField.getY()); // debug
-            } else if(certificateField.getFieldType() == FieldType.ARRAY) {
-//                Debugger.log("Loading courses : " + certificateField.getCourses().size()); // debug
-                ObservableList<String> list = FXCollections.observableArrayList(certificateField.getArray());
-                ComboBox<String> box = new ComboBox(list);
-//                box.setMinWidth(FIELD_WIDTH);
-                box.setMaxWidth(Double.MAX_VALUE);
-//                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
-                // USEFUL DEBUG INFO
-//                Debugger.log("combobox layout width " + box.getLayoutBounds().getWidth() + ", layout height " + box.getLayoutBounds().getHeight()); // debug
-//                Debugger.log("combobox boundsinlocal width " + box.getBoundsInLocal().getWidth() + ", boundsinlocal height " + box.getBoundsInLocal().getHeight()); // debug                
-//                Debugger.log("combobox boundsinparent width " + box.getBoundsInParent().getWidth() + ", boundsinparent height " + box.getBoundsInParent().getHeight()); // debug                
-                // END
-//                box.setOnAction(getComboActionTraverse()); // TODO action traverse
-//                box.setOnKeyPressed(actionTraverse); // doesnt work
-//                box.setOnAction(actionComboTraverse); // not good
-                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
-                gridPane.add(box, 1, row);
-                dataHolders.add(box); // save a copy for printing later
-                box.getSelectionModel().select(0);
-            } else if(certificateField.getFieldType() == FieldType.TEXT){
-//                TextField textField = new TextField();
-                if(!certificateField.isRepeating()) {
-                    ComboBox<String> box = new ComboBox<>();
-//                    box.setMinWidth(FIELD_WIDTH);
-                    box.setMaxWidth(Double.MAX_VALUE);
-    //                if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH); // stupid width set
-                    box.setEditable(true);
-                    box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
-    //                box.setOnAction(actionComboTraverse); // not good
-    //                box.setOnKeyPressed(actionTraverse); // doesnt work
-                    gridPane.add(box, 1, row);
-                    dataHolders.add(box); // save a copy for printing later
-                } else {
-                    TextField text = new TextField();
-                    text.setOnKeyPressed(actionTraverse);
-                    gridPane.add(text, 1, row);
-                    dataHolders.add(text);
-                }
-            } else { // REGNO, DATE
-                TextField textField = new TextField();
-                textField.setOnKeyPressed(actionTraverse);
-                gridPane.add(textField, 1, row);
-                dataHolders.add(textField); // save a copy for printing later
             }
+            gridPane.add(node, 1, row);
+            dataHolders.add(node);
+
 //            indicator.setProgress(row * 100 / wrapper.getCertificateFields().size()); // null pointer
             populatingProgress.set(row * 100 / wrapper.getCertificateFields().size());
 //            Debugger.log("populating progress" + populatingProgress.get());
             row++;
         }
         /* populated */
-        
+        gridPane.add(new Separator(Orientation.HORIZONTAL), 0, row, 3, 1);
+        row++;
         gridPane.add(nextButton, 1 , row); // add before the last column
-        gridPane.add(finishButton, 2, row); // add to the last column
-        
+        gridPane.add(finishButton, 2, row); // add to the last column        
         
         return gridPane;
     }
+    
+    
 
-    private Button getBrowseButton() {
+    private Button getBrowseButton(final TextField text) {
         Button button = new Button("Browse...");
         button.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent t) {
+                Debugger.log("[CreateCertificateDialog] Browse button clicked..."); // debug
                 fileChooser.setTitle("Open photo");
-                if(UserDataManager.getAvatarImagePath() != null) {
-                    fileChooser.setInitialDirectory(UserDataManager.getAvatarImagePath());
+                File start = UserDataManager.getAvatarImagePath();
+                if(start != null) {
+//                    if(!start.getAbsolutePath().endsWith("/")) start = new File(start.getAbsolutePath() + "/"); // fix
+                    if(start.isDirectory()) {
+                        Debugger.log("[CreateCertificateDialog] filechooser : setting last avatar path - " + start.getAbsolutePath()); // debug
+                        fileChooser.setInitialDirectory(start);
+                    }
                 }
                 File file = fileChooser.showOpenDialog(primaryStage);
+                Debugger.log("[CreateCertificateDialog] filechooser : file selected"); // debug
                 if(file != null) {
                     UserDataManager.setAvatarImagePath(file);
-                    avatarPathField.setText(file.getAbsolutePath());
+                    text.setText(file.getAbsolutePath());
                 }
             }
         });
@@ -328,36 +260,38 @@ class CreateCertificateDialog extends Stage {
     
     private void retrieveInfoAndSendForPrinting() {
         // Debugger.log("Populating certificate fields :"); // debug
+        /*
+         * CREATE A HASHMAP AND PUT THE VALUES INTO IT
+         */
         HashMap<CertificateField, String> fields = new HashMap<>(); // certificate field and user input
         String savename = "";
         int index = 0;
         for (CertificateField field : wrapper.getCertificateFields()) {
-            if (field.getFieldType() == FieldType.ARRAY || field.getFieldType() == FieldType.TEXT) {
-                if(!field.isRepeating()) {
-                    ComboBox<String> cb = (ComboBox) dataHolders.get(index);
-                    fields.put(field, cb.getSelectionModel().getSelectedItem());
-                } else {
+            Debugger.log("[CreateCertificateDialog]Retrieving gui components values : " + index + " " + field.getFieldType()); // debug
+            if (field.getFieldType() == FieldType.TEXT) {
+                if(field.isRepeating()) {
                     TextField tf = (TextField) dataHolders.get(index);
                     fields.put(field, tf.getText());
+                } else {
+                    ComboBox<String> cb = (ComboBox) dataHolders.get(index);
+                    fields.put(field, cb.getSelectionModel().getSelectedItem());
                 }
-            } else { // REGNO, DATE
+            } else if(field.getFieldType() == FieldType.ARRAY) {
+                ComboBox<String> cb = (ComboBox) dataHolders.get(index);
+                fields.put(field, cb.getSelectionModel().getSelectedItem());
+            } else { // REGNO, DATE, IMAGE
                 TextField tf = (TextField)dataHolders.get(index);
                 fields.put(field, tf.getText());
                 if(field.getFieldType() == FieldType.REGNO) savename = tf.getText();
+//                if(field.getFieldType() == FieldType.IMAGE) Debugger.log("retrieving avatar : " + tf.getText());
             }
             index++;
         }
         
-        
-//        File saveFile;
-//        if(savename.contains("/")) {
-//            // remove slash and every character after slash because windows doesnt support slashes in filenames
-//            saveFile = new File(savePathField.getText() + File.separatorChar + savename.substring(0, savename.lastIndexOf("/")));
-//        } else {
-//            saveFile = new File(savePathField.getText() + File.separatorChar + savename);
-//        }
-//        Debugger.log("Savename : " + savename + "\nwriting certificate image : " + saveFile.getAbsolutePath());
-        
+        /*
+         * WINDOWS FILESYSTEM DOES NOT SUPPORT SPECIAL CHARACTERS IN FILENAME.
+         * REGNO field is known to contain a slash("/") character. we need to remove this character.
+         */
         if(savename.contains("/")) {
             // remove slash and every character after slash because windows doesnt support slashes in filenames
             savename =  savename.substring(0, savename.lastIndexOf("/"));
@@ -365,23 +299,13 @@ class CreateCertificateDialog extends Stage {
         
         String savePath = savePathField.getText();
 
-//        saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension, DONT DO THIS NOW
+//        saveFile = certificateUtils.correctPngExtension(saveFile); // correct file extension, DONT DO THIS NOW, done at a lower level
 
+        /*
+         * PASS ON THE ORDER TO THE IMAGE WRITER SERVICE(IWS)
+         */
         try {
-            // give order to image writer service
-    //        iws.takeWork(certificateImage, fields, saveFile); // no need to specify certificate image
             iws.takeImageWriteOrder(new ImageWriteOrder(fields, savePath, savename));
-            
-    //        try {
-    //            BufferedImage createBufferedImage = ImageUtils.createBufferedImage(certificateImage, fields);
-    //            Debugger.log("created buffered image...");
-    //            ImageUtils.saveImage(createBufferedImage, saveFile.getAbsolutePath());
-    //            Debugger.log("saved image...");
-    //        } catch (FileNotFoundException ex) {
-    //            Logger.getLogger(CreateCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-    //        } catch (IOException ex) {
-    //            Logger.getLogger(CreateCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
-    //        }
         } catch (FileNotFoundException ex) {
             Logger.getLogger(CreateCertificateDialog.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
@@ -419,7 +343,7 @@ class CreateCertificateDialog extends Stage {
     
     private boolean isFieldsFilled() {
         boolean filled = true;
-        Debugger.log("Data holder size : " + dataHolders.size()); // debug
+        Debugger.log("[CreateCertificateDialog] Data holder size : " + dataHolders.size()); // debug
         for(Node node : dataHolders) {
             if(node instanceof TextField) {
                 TextField tf = (TextField) node;
@@ -494,24 +418,49 @@ class CreateCertificateDialog extends Stage {
         };
     }
     
-    private Node getSuitableComponent(FieldType fieldType, CertificateField certificateField) {
-        if (fieldType == FieldType.IMAGE) {
-            TextField textField = new TextField();
-            textField.setPrefWidth(FIELD_WIDTH);
-            return textField;
-        } else if(fieldType == FieldType.ARRAY){
+    private Label getSuitableLabel(CertificateField certificateField) {
+        Label label = new Label();
+        if(certificateField.getFieldType() == FieldType.TEXT || certificateField.getFieldType() == FieldType.ARRAY) {
+            label.setText(certificateField.getFieldName() + " :");
+//            label = new Label(certificateField.getFieldName() + " : ");
+//            Debugger.log("Adding " + certificateField.getFieldType() + " : " + certificateField.getFieldName());
+        } else {
+            label.setText(certificateField.getFieldType().getName() + " :");
+//            label = new Label(certificateField.getFieldType().getName() + " : "); // new enum implementation
+//                label = new Label(certificateField.getFieldType().toString() + " : ");
+//            Debugger.log("Adding " + certificateField.getFieldType().toString());
+        }
+        return label;
+    }
+    
+    private Node getSuitableComponent(CertificateField certificateField) {
+        if (certificateField.getFieldType() == FieldType.IMAGE) {
+            TextField avatarPathField = new TextField();
+            avatarPathField.setOnKeyPressed(actionTraverse);
+//            Debugger.log("Adding avatar path field for image at : " + certificateField.getX() + "," + certificateField.getY()); // debug
+            return avatarPathField;
+        } else if(certificateField.getFieldType() == FieldType.ARRAY) {
+            Debugger.log("[CreateCertificateDialog] Loading array : " + certificateField.getArray().size()); // debug
             ObservableList<String> list = FXCollections.observableArrayList(certificateField.getArray());
             ComboBox<String> box = new ComboBox(list);
-            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
-            box.setOnAction(actionComboTraverse);
+            box.setMaxWidth(Double.MAX_VALUE);
+            box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
+            box.getSelectionModel().select(0);
             return box;
-        } else if(certificateField.getFieldType() == FieldType.TEXT){
-            ComboBox<String> box = new ComboBox<>();
-            if(box.getPrefWidth() < FIELD_WIDTH) box.setPrefWidth(FIELD_WIDTH);
-            box.setEditable(true);
-            box.setOnAction(actionComboTraverse);
-            return box;
-        } else {
+        } else if(certificateField.getFieldType() == FieldType.TEXT) {
+            Debugger.log("[CreateCertificateDialog] Text Repeating : " + certificateField.isRepeating()); // debug
+            if(!certificateField.isRepeating()) {
+                ComboBox<String> box = new ComboBox<>();
+                box.setMaxWidth(Double.MAX_VALUE);
+                box.setEditable(true);
+                box.addEventFilter(KeyEvent.KEY_PRESSED, enterKeyAction);
+                return box;
+            } else { // repeating text
+                TextField text = new TextField();
+                text.setOnKeyPressed(actionTraverse);
+                return text;
+            }
+        } else { // REGNO, DATE
             TextField textField = new TextField();
             textField.setOnKeyPressed(actionTraverse);
             return textField;
@@ -523,7 +472,7 @@ class CreateCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER){
-                    Debugger.log("KeyCode.Enter : traversing to Direction.NEXT");
+                    Debugger.log("KeyCode.Enter : traversing to Direction.NEXT"); // next
                     ((Node)t.getSource()).impl_traverse(Direction.NEXT);
                 }
             }
@@ -537,17 +486,28 @@ class CreateCertificateDialog extends Stage {
                 Button source = (Button) event.getSource();
                 if(source.equals(nextButton)) {
                     if(isFieldsFilled()) {
-                        Debugger.log("pressed next...");
-                        retrieveInfoAndSendForPrinting();
-                        clearOrIncrementFields();
-                        resumeFocus();
+                        Debugger.log("[CreateCerificateDialog] pressed next...");
+                        TextField tf = (TextField) getAvatarPathField(); // debug
+                        Platform.runLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                retrieveInfoAndSendForPrinting();
+                                clearOrIncrementFields();
+                                resumeFocus();
+                            }
+                        });
                     } else {
                         Alert.showAlertError(primaryStage, "Error", "Please fill in all the fields");
                     }
                 } else if(source.equals(finishButton)) {
                     if(isFieldsFilled()) {
-                        Debugger.log("pressed finish...");
-                        retrieveInfoAndSendForPrinting();
+                        Debugger.log("[CreateCertificateDialog] pressed finish...");
+                        Platform.runLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                retrieveInfoAndSendForPrinting();
+                            }
+                        });
                         close();
                     } else {
                         Alert.showAlertError(primaryStage, "Error", "Please fill in all the fields");
@@ -555,6 +515,16 @@ class CreateCertificateDialog extends Stage {
                 }
             }
         };
+    }
+    
+    public Node getAvatarPathField() {
+        List<CertificateField> fields = wrapper.getCertificateFields();
+        int index = 0;
+        for(Node node : dataHolders) {
+            if(fields.get(index).getFieldType() == FieldType.IMAGE) return node;
+            index++;
+        }
+        return null;
     }
     
     public ReadOnlyDoubleProperty populatingProgressProperty() {
