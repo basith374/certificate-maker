@@ -86,7 +86,6 @@ public class Window  {
     private static AboutDialog ABOUT_DIALOG;
     private static LoadingBox LOADINGBOX;
     private static NewCertificateDialog NEWCERTIFICATE_DIALOG;
-    private static FieldsDialog FIELDS_DIALOG;
     
     /*
      * MAIN WINDOW GUI COMPONENTS
@@ -446,8 +445,7 @@ public class Window  {
         redoMenu.setOnAction(a);
         fieldsMenu.setOnAction(menuhandler);
         
-        editMenu.getItems().addAll(undoMenu, redoMenu); // removed fields menu
-//        editMenu.getItems().addAll(undoMenu, redoMenu, new SeparatorMenuItem(), fieldsMenu);
+        editMenu.getItems().addAll(undoMenu, redoMenu);
         menuBar.getMenus().add(editMenu);
         
         // OUTPUT MENU
@@ -542,17 +540,6 @@ public class Window  {
                     UserDataManager.setDefaultImageFormat("jpg");
                 } else if("png format".equalsIgnoreCase(action)) {
                     UserDataManager.setDefaultImageFormat("png");
-                } else if("fields".equalsIgnoreCase(action)) {
-                    if(FIELDS_DIALOG == null) {
-                        FIELDS_DIALOG = new FieldsDialog(PRIMARY_STAGE);
-                    }
-                    Tab tab = tabPane.getSelectionModel().getSelectedItem();
-                    CertificateTab ct = tabMap.get(tab);
-                    if(ct != null) {
-                        FIELDS_DIALOG.showDialog(ct.createNodeList());
-                    } else {
-                        Debugger.log("tab is null...");
-                    }
                 }
             }
         };
@@ -574,19 +561,6 @@ public class Window  {
      */
     private Node getTabPane() {
         tabPane = new TabPane();
-        // status label changing listeners
-//        tabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
-//            @Override
-//            public void changed(ObservableValue<? extends Tab> ov, Tab t, Tab t1) {
-//                CertificateTab tab = (CertificateTab) ov.getValue();
-//                if(tab != null) {
-//                    File imageFile = tab.getCertificateWrapper().getCertificateImage(); // null pointer
-//                    statusLabel.setText(imageFile.getName() + "(" + convertToStringSize(imageFile.length()) + ")");
-//                }
-//                Debugger.log("tab selection changed");
-//            }
-//        });
-//        tabPane.setTabClosingPolicy(); // TODO tab close combobox reset
         return tabPane;
     }
 
@@ -821,17 +795,6 @@ public class Window  {
 //        }
 //    }
     // end cursor methods
-    
-    
-    
-    /**
-     * 
-     * @return 
-     */
-    private ObservableList getRecentTemplates() {
-//        Gson a = new Gson();
-        return null;
-    }
 
     /*************************
      *  HIGH LEVEL METHODS   *

@@ -1,0 +1,18 @@
+Credits for Certificate Maker:
+
+Project Manager :
+Anuprasad Nambiar
+
+Artwork by :
+Rinas Musthafa
+
+Developers :
+* Shibin Arakkan (System Architect)
+* Rinoy K (Domain Expert)
+* Roshan Hanjaz (Quality Assurance)
+* Basith Mohammed (Developer)
+
+We're thankful to our teachers and fellow colleagues for their kind cooperation.
+And thanks to all others who helped in the development process.
+
+BCZ.
