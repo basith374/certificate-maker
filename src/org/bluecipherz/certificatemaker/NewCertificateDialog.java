@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -113,13 +113,13 @@ public class NewCertificateDialog extends Stage {
                     }
                 } else if(source.equals(cancelButton)) {
                     close();
-                } else {
+                } else { // ok button
                     if(radiogroup.getSelectedToggle().equals(radioButton1)) {
                         window.openCreateCertificateDialog();
                         close();
                     } else {
                         File file = new File(pathField.getText());
-                        if(file != null) {
+                        if("".equals(pathField.getText()) && file.isFile()) {
                             window.selectTab(file); // this method also opens the file if not opened
                             close();
                         } else {
@@ -162,6 +162,7 @@ public class NewCertificateDialog extends Stage {
             }
         });
         setScene(scene);
+        setResizable(false);
         sizeToScene();
     }
     

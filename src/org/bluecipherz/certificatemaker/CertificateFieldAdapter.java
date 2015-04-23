@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -17,8 +17,6 @@
  */
 package org.bluecipherz.certificatemaker;
 
-import java.util.ArrayList;
-import java.util.List;
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 
 /**

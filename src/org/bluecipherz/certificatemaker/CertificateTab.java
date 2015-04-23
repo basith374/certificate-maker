@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -84,7 +85,7 @@ public final class CertificateTab {
     /* used for action listeners, poor thing, they dont know what a certificate node is
      * totally waste of resources but necessary. :( maybe find something better in the future
      */
-    private HashMap<Node, CertificateNode> certificateContents = new HashMap<>();
+    private HashMap<Node, CertificateNode> nodeMap = new HashMap<>();
     
     public CertificateNode getCertificateNode(Node node) {
 //        if(node instanceof ImageView) {
@@ -95,7 +96,7 @@ public final class CertificateTab {
 //            return certificateContents.get(text);
 //        }
 //        return null;
-        return certificateContents.get(node);
+        return nodeMap.get(node);
     }
     
     public CommandManager getCommandManager() {
@@ -250,9 +251,13 @@ public final class CertificateTab {
         return wrapper;
     }
     
+    /**
+     * used by fields dialog
+     * @return 
+     */
     public ObservableList<CertificateNode> createNodeList() {
         ObservableList<CertificateNode> nodes = FXCollections.observableArrayList();
-        for(Map.Entry<Node, CertificateNode> node : certificateContents.entrySet()) {
+        for(Map.Entry<Node, CertificateNode> node : nodeMap.entrySet()) {
             nodes.add(node.getValue());
         }
         return nodes;
@@ -356,22 +361,21 @@ public final class CertificateTab {
                 CertificateAvatar ca = (CertificateAvatar) getCertificateNode(imageView);
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
                     if(button == MouseButton.PRIMARY) {
-                        scrollPane.setPannable(false);
-                        if(Window.getMouseMode() == Window.MODE_MOVE) {
-                            initialComponentX = imageView.getX();
-                            initialComponentY = imageView.getY();
-                            initialEventX = event.getX();
-                            initialEventY = event.getY();
-                        } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-                            // new command pattern
-                            DeleteCommand command = new DeleteCommand(ca);
-                            commandManager.add(command);
-                            // controlled removal
-//                            CertificateTab tab = ca.getContainer();
-//                            tab.removeNode(ca);
-                        } else if(Window.getMouseMode() == Window.MODE_EDIT) {
+                        if(Window.getMouseMode() == Window.MODE_EDIT) { // pan bug fix
                             Debugger.log("[CertificateTab] opening image edit dialog"); // debug
                             WINDOW.showEditAvatarDialog(CertificateTab.this, ca);
+                        } else {
+                            scrollPane.setPannable(false);
+                            if(Window.getMouseMode() == Window.MODE_MOVE) {
+                                initialComponentX = imageView.getX();
+                                initialComponentY = imageView.getY();
+                                initialEventX = event.getX();
+                                initialEventY = event.getY();
+                            } else if (Window.getMouseMode() == Window.MODE_DELETE) {
+                                // new command pattern
+                                DeleteCommand command = new DeleteCommand(ca);
+                                commandManager.add(command);
+                            }
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
@@ -387,6 +391,7 @@ public final class CertificateTab {
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_RELEASED)) {
                     if(button == MouseButton.PRIMARY) {
+                        scrollPane.setPannable(true); // scrollpane pan
                         if(Window.getMouseMode() == Window.MODE_MOVE) {
                             double currentX = event.getX();
                             double currentY = event.getY();
@@ -421,23 +426,24 @@ public final class CertificateTab {
                 CertificateText ct = (CertificateText) getCertificateNode(text);
                 if (eventType.equals(MouseEvent.MOUSE_PRESSED)) {
                     if(button == MouseButton.PRIMARY) {
-                        scrollPane.setPannable(false); // scrollpane pan
-                        if(Window.getMouseMode() == Window.MODE_MOVE) {
-                            initialComponentX = text.getX();
-                            initialComponentY = text.getY();
-                            initialEventX = event.getX();
-                            initialEventY = event.getY();
-                            Debugger.log("[CertificateTab] moving component start : " + initialEventX + "," + initialEventY); // debug
-                        } else if (Window.getMouseMode() == Window.MODE_DELETE) {
-                            // new command pattern
-                            DeleteCommand command = new DeleteCommand(ct);
-                            commandManager.add(command);
-//                            CertificateTab tab = ct.getContainer();
-//                            tab.removeNode(ct); // highly controlled remove action, very safe
-                            Debugger.log("[CertificateTab] Deleting : " + text.getText() + ", contents :" + certificateContents.size()); // new debug
-                        } else if (Window.getMouseMode() == Window.MODE_EDIT) {
-
+                        if(Window.getMouseMode() == Window.MODE_EDIT) { // pan bug fix
                             WINDOW.showEditFieldDialog(CertificateTab.this, ct);
+                        } else {
+                            scrollPane.setPannable(false); // scrollpane pan
+                            if(Window.getMouseMode() == Window.MODE_MOVE) {
+                                initialComponentX = text.getX();
+                                initialComponentY = text.getY();
+                                initialEventX = event.getX();
+                                initialEventY = event.getY();
+                                Debugger.log("[CertificateTab] moving component start : " + initialEventX + "," + initialEventY); // debug
+                            } else if (Window.getMouseMode() == Window.MODE_DELETE) {
+                                // new command pattern
+                                DeleteCommand command = new DeleteCommand(ct);
+                                commandManager.add(command);
+    //                            CertificateTab tab = ct.getContainer();
+    //                            tab.removeNode(ct); // highly controlled remove action, very safe
+                                Debugger.log("[CertificateTab] Deleting : " + text.getText() + ", contents :" + nodeMap.size()); // new debug
+                            }
                         }
                     }
                 } else if (eventType.equals(MouseEvent.MOUSE_DRAGGED)) {
@@ -595,7 +601,7 @@ public final class CertificateTab {
         CertificateField field = node.getObserver(); // may be renamed in future
         if(field == null) Debugger.log("[CertificateTab] node' observer is null"); // debug
 //        Debugger.log("[CertificateTab]observer field :" + field); // debug
-        certificateContents.put(node.get(), node); // latest implementation, used by event handlers
+        nodeMap.put(node.get(), node); // latest implementation, used by event handlers
         node.setContainer(this); // backreference
 //        field.changedProperty().addListener(new ChangeListener<Boolean>() { // TODO implement this
 //            @Override
@@ -622,7 +628,7 @@ public final class CertificateTab {
     public boolean removeNode(CertificateNode node) {
         CertificateField field = node.getObserver();
         fields.remove(field);
-        certificateContents.remove(node.get()); // latest implementation
+        nodeMap.remove(node.get()); // latest implementation
         node.setContainer(null); // fix
         FieldType type = node.getFieldType();
         if(type == FieldType.DATE) setDateFieldAdded(false);

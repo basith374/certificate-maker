@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -31,17 +31,10 @@ import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
-import javafx.scene.image.ImageView;
-import javafx.scene.text.Text;
-import javax.imageio.ImageWriter;
+import javax.activation.MimetypesFileTypeMap;
 
 /**
  * @author bazi
@@ -52,14 +45,9 @@ import javax.imageio.ImageWriter;
  */
 public class ImageUtils {
 
-    private static CertificateUtils cu;
     private static final ImageUtils INSTANCE = new ImageUtils();
     // class cannot be instantiated
     private ImageUtils() { }
-
-    public static void setCu(CertificateUtils certu) {
-        cu = certu;
-    }
     
     /**
      * Creates a deep copy of the specified BufferedImage.
@@ -201,8 +189,12 @@ public class ImageUtils {
             if(field.getKey().getFieldType() == FieldType.IMAGE) {
                 // draw avatar image
                 File file = new File(field.getValue());
-                Debugger.log("[ImageUtils] opening avatar image " + file.getAbsolutePath()); // debug
-                if(cu.isImageFile(file)) {
+//                String mime = new MimetypesFileTypeMap().getContentType(file);
+//                String type = mime.split("/")[0];
+//                Debugger.log("MIME data : " + mime, ImageUtils.class); // debug
+//                if(file.isFile() && "image".equalsIgnoreCase(type)) {
+                if(file.isFile()) {
+                    Debugger.log("[ImageUtils] opening avatar image " + file.getAbsolutePath()); // debug
                     BufferedImage buffimg = ImageIO.read(file);
                     int x = field.getKey().getX();
                     int y = field.getKey().getY();
@@ -212,12 +204,12 @@ public class ImageUtils {
                     int imgheight = buffimg.getHeight();
                     Debugger.log("[ImageUtils] image dimensions : width" + imgwidth + ", height" + imgheight); // debug
                     Debugger.log("[ImageUtils] max image dimensions : width" + maxwidth + ", height" + maxheight); // debug
-                    // scale image if larger than specified
+                    
+                    AffineTransform at = new AffineTransform();
+                     // scale either proportionally or fixed size
+                    boolean proportional = false;
                     if(imgwidth > maxwidth || imgheight > maxheight) {
                         Debugger.log("image dimensions more than normal ; rescaling..."); // debug
-                        AffineTransform at = new AffineTransform();
-                         // scale either proportionally or fixed size
-                        boolean proportional = false;
                         double xscale = ((double)maxwidth / (double)imgwidth);
                         double yscale = ((double)maxheight / (double)imgheight);
                         Debugger.log("calculated scale factors : x" + xscale + ", y" + yscale); // debug
@@ -260,7 +252,53 @@ public class ImageUtils {
                         }
                         BufferedImageOp op = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
                         g2.drawImage(buffimg, op, x, y);                    
-                    } else {
+                    }
+                    // new
+//                    else if(imgwidth < maxwidth || imgheight < maxwidth) {
+//                        Debugger.log("image dimensions less than normal ; rescaling..."); // debug
+//                        double xscale = ((double)imgwidth / (double)maxwidth);
+//                        double yscale = ((double)imgheight / (double)maxheight);
+//                        Debugger.log("calculated scale factors : x" + xscale + ", y" + yscale); // debug
+//                        if(imgwidth < maxwidth && imgheight < maxheight) {
+//                            Debugger.log("scaling both width & height"); // debug
+//                            if(proportional) {
+//                                Debugger.log("Proportional scale"); // debug
+//                                double scalefactor;
+//                                if(xscale > yscale) {
+//                                    scalefactor = xscale;
+//                                } else if(yscale > xscale) {
+//                                    scalefactor = yscale;
+//                                } else {
+//                                    Debugger.log("Both scale factors are equals :");
+//                                    scalefactor = xscale; // or yscale, either would suffice
+//                                }
+//                                at.scale(scalefactor, scalefactor);
+//                            } else {
+//                                Debugger.log("Non-Proportional scale"); // debug
+//                                at.scale(xscale, yscale);
+//                            }
+//                        } else if(imgwidth < maxwidth) {
+//                            Debugger.log("scaling both width"); // debug
+//                            if(proportional) {
+//                                Debugger.log("Proportional scale"); // debug
+//                                at.scale(xscale, xscale);
+//                            } else {
+//                                Debugger.log("Non-Proportional scale"); // debug
+//                                at.scale(xscale, 1.0);
+//                            }
+//                        } else if(imgheight > maxheight) {
+//                            Debugger.log("scaling both height"); // debug
+//                            if(proportional) {
+//                                Debugger.log("Proportional scale"); // debug
+//                                at.scale(yscale, yscale);
+//                            } else {
+//                                Debugger.log("Non-Proportional scale"); // debug
+//                                at.scale(1.0, yscale);
+//                            }
+//                        }
+//                    }
+                    // end new
+                    else {
                         g2.drawImage(buffimg, null, x, y); // image dimensions less than specified
                     }
                     Debugger.log("[ImageUtils] drawImage(" + field.getValue() + ")"); // debug
@@ -284,6 +322,7 @@ public class ImageUtils {
             }
             index++;
         }
+        // dispose of graphics
         g2.dispose();
         return bufferedImage;
     }

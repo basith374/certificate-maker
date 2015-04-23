@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -24,7 +24,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 

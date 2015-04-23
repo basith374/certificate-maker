@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -112,7 +112,7 @@ class NewTemplateDialog extends Stage {
                 }
             }
         });
-        gridPane.add(finishButton, 1, 3);
+        gridPane.add(finishButton, 2, 3);
         GridPane.setHalignment(finishButton, HPos.RIGHT);
         root.getChildren().add(gridPane);
         Scene scene = new Scene(root, Color.WHITE);
@@ -125,6 +125,7 @@ class NewTemplateDialog extends Stage {
             }
         });
         setScene(scene);
+        setResizable(false);
         sizeToScene();
     }
     

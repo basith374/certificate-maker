@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -22,18 +22,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -42,15 +37,11 @@ import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
-import javafx.concurrent.Worker;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
@@ -59,7 +50,6 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.event.IIOWriteProgressListener;
-import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
 import javax.imageio.stream.ImageOutputStream;
 
 /**
@@ -67,9 +57,10 @@ import javax.imageio.stream.ImageOutputStream;
  * @author bazi
  */
 public class ImageWriterService {
-
-    private final ProgressBar progressBar;
-    private final Label statusLabel;
+    
+    private final DoubleProperty extProgressProperty;
+    private final StringProperty extTextProperty;
+//    private final BooleanProperty extShowProgressProperty;
 
     
 //    private final ExecutorService exec = Executors.newSingleThreadExecutor(new ThreadFactory() {
@@ -118,115 +109,53 @@ public class ImageWriterService {
      * @param window
      * @param certificateImage 
      */
-    public ImageWriterService(final Window window) {
+    public ImageWriterService(DoubleProperty progressProperty, StringProperty textProperty, final Window window) {
         
-        this.progressBar = window.getProgressBar();
-        this.statusLabel = window.getStatusLabel();
+        this.extProgressProperty = progressProperty;
+        this.extTextProperty = textProperty;
+//        this.extShowProgressProperty = showProgressProperty;
         
         
         // auto-hide progressbar on idle task
-        taskMonitor.idleProperty().addListener(new InvalidationListener() {
+//        extShowProgressProperty.bind(taskMonitor.idleProperty());
+        taskMonitor.idleProperty().addListener(new ChangeListener<Boolean>() {
             @Override
-            public void invalidated(Observable o) {
-                if(taskMonitor.idleProperty().get()) {
-                    window.removeProgressBar();
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if(t1.booleanValue()) {
+                    window.hideProgressBar();
                 } else {
-                    window.addProgressBar();
+                    window.showProgressBar();
                 }
             }
         });
         
+        
         // bind progressbar to taskmonitor
-        progressBar.progressProperty().bind(taskMonitor.currentTaskProgressProperty());
+        extProgressProperty.bind(taskMonitor.currentTaskProgressProperty());
         
         taskMonitor.pendingTasksProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> ov, Number oldVal, Number newVal) {
                 if(newVal.intValue() > 0) {
-                    statusLabel.setText("Tasks : " + newVal.intValue());
+                    extTextProperty.set("Tasks : " + newVal.intValue());
                 } else {
-                    statusLabel.setText("All tasks done.");
+                    extTextProperty.set("All tasks done.");
                 }
             }
         });
     }
-    
-    public Task<Void> createOutputWorker(final BufferedImage bufferedImage, final File saveFile) {
-        return new Task() {
-            @Override
-            protected Void call() throws Exception {
-                try (FileOutputStream fos = new FileOutputStream(saveFile); ImageOutputStream ios = ImageIO.createImageOutputStream(fos)) {
-                    Debugger.log("image writers format " + defaultExtension); // debug
-                    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName(defaultExtension);
-                    ImageWriter writer = writers.next(); 
-                    // lossless compression
-//                    ImageWriteParam iwp = writer.getDefaultWriteParam();
-//                    if("jpg".equalsIgnoreCase(defaultExtension)) {
-//                        Debugger.log("JPEG Lossless compression...");
-//                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-//                        iwp.setCompressionType("JPEG-LS");
-//                    }
-                    writer.setOutput(ios);
-                    writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
-                        @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
-                        // Only this method is used to send progress to task
-                        @Override public void imageProgress(ImageWriter source, float percentageDone) { updateProgress(percentageDone, 100); }
-                        @Override public void imageComplete(ImageWriter source) {}
-                        @Override public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
-                        @Override public void thumbnailProgress(ImageWriter source, float percentageDone) {}
-                        @Override public void thumbnailComplete(ImageWriter source) {}
-                        @Override public void writeAborted(ImageWriter source) {}
-                    });
-                    writer.write(bufferedImage);
-//                    writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
-                    Debugger.log("disposing write sequence");
-                    writer.dispose();
-                }
-                return null;
-            }
-        };
-    }
-    
-    // TODO seperate workers for jpg and png
-    public Task<Void> createJPGWorker(final BufferedImage bufferedImage, final File saveFile) {
-        return new Task() {
-            @Override
-            protected Void call() throws Exception {
-                try (FileOutputStream fos = new FileOutputStream(saveFile); ImageOutputStream ios = ImageIO.createImageOutputStream(fos)) {
-                    Debugger.log("image writers format " + defaultExtension); // debug
-                    Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
-                    ImageWriter writer = writers.next(); 
-                    // lossless compression
-                    ImageWriteParam iwp = writer.getDefaultWriteParam();
-                    if("jpg".equalsIgnoreCase(defaultExtension)) {
-                        Debugger.log("JPEG Lossless compression...");
-                        iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                        iwp.setCompressionType("JPEG-LS");
-//                        iwp.setCompressionType();
-                    }
-                    writer.setOutput(ios);
-                    writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
-                        @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
-                        // Only this method is used to send progress to task
-                        @Override public void imageProgress(ImageWriter source, float percentageDone) { updateProgress(percentageDone, 100); }
-                        @Override public void imageComplete(ImageWriter source) {}
-                        @Override public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
-                        @Override public void thumbnailProgress(ImageWriter source, float percentageDone) {}
-                        @Override public void thumbnailComplete(ImageWriter source) {}
-                        @Override public void writeAborted(ImageWriter source) {}
-                    });
-                    writer.write(bufferedImage);
-//                    writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
-                    Debugger.log("disposing write sequence");
-                    writer.dispose();
-                }
-                return null;
-            }
-        };
-    }
 
-    public void takeWork(BufferedImage bi, File file){
-        Task<Void> task = createOutputWorker(bi, fixDefaultExtension(file));
+    public void takeWork(BufferedImage bi, File file) {
+        Task<Void> task;
+        if("png".equalsIgnoreCase(defaultExtension)) {
+//            task = createPNGWorker(bi, fixDefaultExtension(file));
+            // new memory disposal technique
+            task = new PNGWorker(bi, fixDefaultExtension(file)); // substitute
+        } else { // jpg
+//            task = createJPGWorker(bi, fixDefaultExtension(file));
+            // new memory disposal technique
+            task = new JPEGWorker(bi, fixDefaultExtension(file)); // substitute
+        }
         taskMonitor.monitor(task);
         exec.submit(task);
     }
@@ -240,20 +169,20 @@ public class ImageWriterService {
     }
     
     public void takeImageWriteOrder(ImageWriteOrder order) throws FileNotFoundException, IOException, OutOfMemoryError {
-        Debugger.log("IMAGE WRITE SERVICE : default image extension " + defaultExtension); // debug
+        Debugger.log("default image extension " + defaultExtension, ImageWriterService.class); // debug
         if(a3output) {
             if(queue == null) {
                 queue = order;
-                statusLabel.setText("Added to queue");
-                Debugger.log("IMAGE WRITER SERVICE : added order to queue"); // debug
+                extTextProperty.set("Added to queue");
+                Debugger.log("added order to queue", ImageWriterService.class); // debug
                 // TODO status message : ADDED TO QUEUE
             } else {
-                if(certificateImage == null) Debugger.log("Shit rain!"); // debug
+                if(certificateImage == null) Debugger.log("Shit rain!", ImageWriterService.class); // debug
                 BufferedImage img1 = ImageUtils.createBufferedImage(certificateImage, queue.fields);
                 BufferedImage img2 = ImageUtils.createBufferedImage(certificateImage, order.fields);
-                Debugger.log("created two buffered images..."); // debug
+                Debugger.log("created two buffered images...", ImageWriterService.class); // debug
                 BufferedImage combined = ImageUtils.combineImages(img1, img2);
-                Debugger.log("combined two images");
+                Debugger.log("combined two images", ImageWriterService.class); // debug
                 /* a lil messy below */
                 String combinedName = queue.saveName + order.saveName; // TODO save name for combined image
                 File saveFile = new File(queue.savePath + File.separatorChar + combinedName); // assuming both are to saved in same location
@@ -299,6 +228,7 @@ public class ImageWriterService {
                         case FAILED:
                             task.stateProperty().removeListener(this);
                             idle.set(true);
+                            Debugger.log("A task has failed", ImageWriterService.class); // debug
                             break;
                     }
                     
@@ -334,5 +264,98 @@ public class ImageWriterService {
         }
         
     }
+    
+    class JPEGWorker extends Task<Void> {
+
+        BufferedImage bufferedImage;
+        File saveFile;
+        
+        JPEGWorker(BufferedImage bufferedImage, File saveFile) {
+            this.bufferedImage = bufferedImage;
+            this.saveFile = saveFile;
+        }
+        
+        public void reset(BufferedImage bufferedImage, File saveFile) {
+            this.bufferedImage = bufferedImage;
+            this.saveFile = saveFile;
+        }
+        
+        @Override
+        protected Void call() throws Exception {
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(saveFile)) {
+                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpeg");
+                ImageWriter writer = writers.next(); 
+                // lossless compression
+                ImageWriteParam iwp = writer.getDefaultWriteParam();
+                Debugger.log("JPEG Lossless compression...", ImageWriterService.class);
+                iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+//                        iwp.setCompressionType("JPEG-LS");
+                iwp.setCompressionQuality(1.0f);
+                writer.setOutput(ios);
+                writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
+                    @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
+                    // Only this method is used to send progress to task
+                    @Override public void imageProgress(ImageWriter source, float percentageDone) { updateProgress(percentageDone, 100); }
+                    @Override public void imageComplete(ImageWriter source) {}
+                    @Override public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
+                    @Override public void thumbnailProgress(ImageWriter source, float percentageDone) {}
+                    @Override public void thumbnailComplete(ImageWriter source) {}
+                    @Override public void writeAborted(ImageWriter source) {}
+                });
+                writer.write(null, new IIOImage(bufferedImage, null, null), iwp); // jpeg
+                Debugger.log("disposing write sequence", ImageWriterService.class);
+                writer.dispose();
+            } finally {
+                // major memory saver
+                bufferedImage.flush();
+                bufferedImage = null;
+            }
+            return null;
+        }        
+    }
+    
+    class PNGWorker extends Task<Void> {
+
+        BufferedImage bufferedImage;
+        File saveFile;
+        
+        PNGWorker(BufferedImage bufferedImage, File saveFile) {
+            this.bufferedImage = bufferedImage;
+            this.saveFile = saveFile;
+        }
+        
+        public void reset(BufferedImage bufferedImage, File saveFile) {
+            this.bufferedImage = bufferedImage;
+            this.saveFile = saveFile;
+        }
+        
+        @Override
+        protected Void call() throws Exception {
+            try (ImageOutputStream ios = ImageIO.createImageOutputStream(saveFile)) {
+                Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("png");
+                ImageWriter writer = writers.next();
+                writer.setOutput(ios);
+                writer.addIIOWriteProgressListener(new IIOWriteProgressListener() {
+                    @Override public void imageStarted(ImageWriter source, int imageIndex) { updateMessage("Saving " + saveFile.getAbsolutePath()); }
+                    // Only this method is used to send progress to task
+                    @Override public void imageProgress(ImageWriter source, float percentageDone) { updateProgress(percentageDone, 100); }
+                    @Override public void imageComplete(ImageWriter source) {}
+                    @Override public void thumbnailStarted(ImageWriter source, int imageIndex, int thumbnailIndex) {}
+                    @Override public void thumbnailProgress(ImageWriter source, float percentageDone) {}
+                    @Override public void thumbnailComplete(ImageWriter source) {}
+                    @Override public void writeAborted(ImageWriter source) {}
+                });
+                writer.write(bufferedImage);
+                writer.dispose();
+                Debugger.log("disposing write sequence", ImageWriterService.class); // debug
+            } finally {
+                // major memory saver
+                bufferedImage.flush();
+                bufferedImage = null;
+            }
+            return null;
+        }        
+    }
+    
     
 }

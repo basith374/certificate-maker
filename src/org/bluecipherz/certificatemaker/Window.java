@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -19,11 +20,9 @@ import java.awt.GraphicsEnvironment;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.*;
-import javafx.scene.Cursor;
 import javafx.scene.control.*;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -43,6 +42,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -111,6 +112,7 @@ public class Window  {
     private Label messageLabel;
 //    private boolean disallowmultiplefields = !UserDataManager.isMultipleFieldsAllowed();
     private Menu openRecentMenu;
+    private BooleanProperty showProgressProperty;
 
     private void saveRecent(File file) {
         MenuItem item = new MenuItem(file.getAbsolutePath());
@@ -275,16 +277,6 @@ public class Window  {
         button3.setTooltip(new Tooltip("Add Text"));
         button4.setTooltip(new Tooltip("Delete"));
         button5.setTooltip(new Tooltip("Edit"));
-
-//        button1.setGraphic(new ImageView(new File("icon/movex32.png").toURI().toString()));
-//        button2.setGraphic(new ImageView(new File("icon/addimgx32.png").toURI().toString()));
-//        button3.setGraphic(new ImageView(new File("icon/addx32.png").toURI().toString()));
-//        button4.setGraphic(new ImageView(new File("icon/delx32.png").toURI().toString()));
-//        button5.setGraphic(new ImageView(new File("icon/edit32.png").toURI().toString()));
-//        Debugger.log("Icons set");
-
-        // icons
-//        button1.set
 
         toolBar.getItems().add(button1);
         toolBar.getItems().add(button2);
@@ -521,21 +513,6 @@ public class Window  {
                     }
                     NEWTEMPLATE_DIALOG.show();
                 } else if ("new certificate".equalsIgnoreCase(action)) {
-//                    File file = getFileByDialog(PRIMARY_STAGE, DIALOG_TYPE.OPEN, "Set template for certificate", null);
-//                    if(file != null) {
-//                        CertificateWrapper certificateWrapper = certificateUtils.openTemplate(file);
-//                        if(!isOpenedInGui(file)) {
-//                            openTemplateInGui(file);
-//                            tabPane.getSelectionModel().select(getTabIndex(file));
-//                        }
-//                        else tabPane.getSelectionModel().select(getTabIndex(file)); // select tab containing file if not selected
-//                        
-//                        // end
-//                        if(CREATECERTIFICATE_DIALOG == null) {
-//                            CREATECERTIFICATE_DIALOG = new CreateCertificateDialog(PRIMARY_STAGE, Window.this);
-//                        }
-//                        CREATECERTIFICATE_DIALOG.openFor(certificateWrapper);
-//                    }
                     if(NEWCERTIFICATE_DIALOG == null) {
                         NEWCERTIFICATE_DIALOG = new NewCertificateDialog(PRIMARY_STAGE, Window.this);
                     }
@@ -747,6 +724,17 @@ public class Window  {
         statusBar.setAlignment(Pos.CENTER_LEFT);
         
         progressBar = new ProgressBar();
+        showProgressProperty = new SimpleBooleanProperty(false);
+        showProgressProperty.addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if(t1.booleanValue()) {
+                    hideProgressBar();
+                } else {
+                    showProgressBar();
+                }
+            }
+        });
         statusLabel = new Label("Status");
         statusBar.getChildren().add(statusLabel);
         statusBar.getChildren().add(new Separator(Orientation.VERTICAL));
@@ -759,30 +747,25 @@ public class Window  {
     public Label getMessageLabel() {
         return messageLabel;
     }
-    
-    public void addMessageLabel() {
-        statusBar.getChildren().add(messageLabel);
-    }
         
-    public void addProgressBar() {
+    public void showProgressBar() {
         statusBar.getChildren().add(0, progressBar);
-    }
-    
-    public boolean isProgressBarAdded() {
-        if(statusBar.getChildren().get(0) instanceof ProgressBar) return true;
-        else return false;
     }
     
     public ProgressBar getProgressBar() {
         return progressBar;
     }
     
-    public void removeProgressBar() {
+    public void hideProgressBar() {
         statusBar.getChildren().remove(progressBar);
     }
 
     public Label getStatusLabel() {
         return statusLabel;
+    }
+    
+    public BooleanProperty showProgressProperty() {
+        return showProgressProperty;
     }
     
     /*** cursor related methods ***/

@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -26,6 +26,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
@@ -53,7 +55,7 @@ public class UserDataManager {
     public static void setCertificateFilePath(File file) {
         if (file != null) {
             prefs.put("filePath", file.getPath());
-            Debugger.log("[UserDataManager] Saving file path for current tab : " + file.getPath()); // debug
+            Debugger.log("Saving file path for current tab : " + file.getPath(), UserDataManager.class); // debug
             // TODO update title
         } else {
             prefs.remove("filePath");
@@ -85,7 +87,7 @@ public class UserDataManager {
 //            }
 //            Debugger.log("seperator : " + File.separator + ", seperatorchar : " + File.separatorChar);
             String path = file.getAbsolutePath().substring(0, file.getAbsolutePath().lastIndexOf(File.separatorChar));
-//            Debugger.log("saving activity path :" +path);
+            Debugger.log("saving activity path :" + path, UserDataManager.class);
             prefs.put("lastActivityPath", path);
         }
     }
@@ -259,7 +261,7 @@ public class UserDataManager {
     
     public static void setDefaultImageFormat(String format) {
         if("jpg".equalsIgnoreCase(format) || "png".equalsIgnoreCase(format)) {
-            Debugger.log("DEFAULT IMAGE EXTENSION : " + format); // debug
+            Debugger.log("DEFAULT IMAGE EXTENSION : " + format, UserDataManager.class); // debug
             prefs.put("imageFormat", format);
         }
     }
@@ -270,6 +272,18 @@ public class UserDataManager {
     
     public static boolean isMultipleFieldsAllowed() {
         return prefs.getBoolean("multiplefields", false);
+    }
+    
+    public static String getBuildNumber() {
+//        ResourceBundle rb = ResourceBundle.getBundle("version.properties");
+        ResourceBundle rb = ResourceBundle.getBundle("version");
+        String msg = "XXX";
+        try {
+            msg = rb.getString("BUILD");
+        } catch(MissingResourceException e) {
+            Debugger.log("BUILD token not in propertyfile", UserDataManager.class);
+        }
+        return msg;
     }
     // END PERSISTENCE METHODS
     

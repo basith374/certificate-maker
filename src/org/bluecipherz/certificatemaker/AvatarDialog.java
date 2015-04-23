@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -27,7 +28,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
@@ -138,8 +138,8 @@ public class AvatarDialog extends Stage {
         okButton = new Button("OK");
         
         okButton.setOnAction(newaction);
-        GridPane.setHalignment(gridPane, HPos.RIGHT);
-        gridPane.add(okButton, 0, 3, 2, 1);
+        GridPane.setHalignment(okButton, HPos.RIGHT);
+        gridPane.add(okButton, 1, 3);
         
         Scene scene = new Scene(gridPane, Color.WHITE);
         scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
@@ -151,6 +151,7 @@ public class AvatarDialog extends Stage {
             }
         });
         setScene(scene);
+        setResizable(false);
         sizeToScene();
     }
     

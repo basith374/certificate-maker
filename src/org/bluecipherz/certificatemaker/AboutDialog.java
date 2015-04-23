@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -17,27 +17,17 @@
  */
 package org.bluecipherz.certificatemaker;
 
-import com.sun.javafx.event.BasicEventDispatcher;
-import com.sun.javafx.event.EventRedirector;
-import com.sun.javafx.event.RedirectedEvent;
-import com.sun.javafx.scene.EnteredExitedHandler;
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -47,15 +37,11 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -80,6 +66,11 @@ public final class AboutDialog extends Stage {
     public AboutDialog(final Stage owner) {
         initOwner(owner);
         initModality(Modality.APPLICATION_MODAL);
+        // test version number
+//        File file = new File("src/version.properties");
+//        if(file.exists()) Debugger.log("version properties found", AboutDialog.class); // debug
+//        else Debugger.log("version properties doesnt exists", AboutDialog.class); // debug
+//        Debugger.log("version file path : " + file.getAbsolutePath(), AboutDialog.class); // debug
         
         borderPane = new BorderPane();
         borderPane.setPadding(new Insets(20));
@@ -128,13 +119,11 @@ public final class AboutDialog extends Stage {
         String creditsText = readFile("ext/CREDITS.txt");
         creditsTextArea.setText(creditsText);
         creditsTextArea.setEditable(false);
-//        creditsTextArea.setMinWidth(500);
-//        creditsTextArea.setMinHeight(300);
         aboutBox = new VBox();
         ImageView imageView = new ImageView(ResourceManger.getInstance().iconx100);
         Label descLabel = new Label("BCZ Certificate Maker");
         descLabel.setFont(Font.font("Verdana", FontWeight.BOLD, 40));
-        Label versionLabel = new Label("v2.0.3");
+        Label versionLabel = new Label("v2.1." + UserDataManager.getBuildNumber());
         Label copyLabel = new Label("Copyright (c) 2012-2015 Blue Cipherz Solutions Inc");
         Button splash = new Button("Cover");
         splash.setOnAction(new EventHandler<ActionEvent>() {
@@ -174,7 +163,14 @@ public final class AboutDialog extends Stage {
         borderPane.setBottom(okbutton);
         
         Scene scene = new Scene(borderPane, 600, 400, Color.GRAY);
-        
+        scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent t) {
+                if(t.getCode() == KeyCode.ESCAPE) {
+                    close();
+                }
+            }
+        });
         initStyle(StageStyle.UNDECORATED);
         setScene(scene);
         sizeToScene();

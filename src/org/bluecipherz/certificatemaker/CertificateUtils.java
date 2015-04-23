@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -281,10 +281,19 @@ public class CertificateUtils {
     }
     
     public boolean isImageFile(File file) {
-        if(!file.isFile()) return false;
-        if(!file.canRead()) return false;
+        if(!file.isFile()) {
+            Debugger.log("[CertificateUtils] specified avatar not a file...");
+            return false;
+        }
+        if(!file.canRead()) {
+            Debugger.log("[CertificateUtils] cannot read specified avatar...");
+            return false;
+        }
         String path = file.getAbsolutePath();
-        if(!path.endsWith(".jpg") || !path.endsWith(".png")) return false;
+        if(!path.endsWith(".jpg") || !path.endsWith(".png")) {
+            Debugger.log("[CertificateUtils] specified avatar image extension not correct...");
+            return false;
+        }
         return true;
     }
     

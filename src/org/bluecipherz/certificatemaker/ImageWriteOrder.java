@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -17,14 +17,13 @@
  */
 package org.bluecipherz.certificatemaker;
 
-import java.io.File;
 import java.util.HashMap;
 
 /**
  *
  * @author bazi
  */
-class ImageWriteOrder {
+public class ImageWriteOrder {
     public final HashMap<CertificateField, String> fields;
 //    public final File saveFile;
     public String savePath;

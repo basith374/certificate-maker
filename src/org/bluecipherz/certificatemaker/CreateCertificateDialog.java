@@ -1,5 +1,5 @@
 /*
- * Copyright BCZ Inc. 2015.
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -21,16 +21,18 @@ import com.sun.javafx.scene.traversal.Direction;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -51,7 +53,6 @@ import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
@@ -103,11 +104,13 @@ class CreateCertificateDialog extends Stage {
         setTitle("Create new certificate");
         
         getIcons().add(ResourceManger.getInstance().newx16);
-        iws = new ImageWriterService(window);
+        DoubleProperty doubleProperty = window.getProgressBar().progressProperty();
+        StringProperty textProperty = window.getStatusLabel().textProperty();
+//        BooleanProperty booleanProperty = window.showProgressProperty();
+        iws = new ImageWriterService(doubleProperty, textProperty, window);
         
         regexUtils = new RegexUtils();
         certificateUtils = new CertificateUtils();
-        ImageUtils.setCu(certificateUtils);
         
         fileChooser = new FileChooser();
         FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("JPEG & PNG Files", "*.jpg", "*.jpeg", "*.png");
@@ -143,6 +146,7 @@ class CreateCertificateDialog extends Stage {
     public void openFor(final CertificateWrapper newWrapper) {
         Debugger.log("[CreateCertificateDialog]Received Wrapper : " + newWrapper);
         dataHolders.clear(); // bug fix
+        if(gridPane != null && gridPane.getChildren().isEmpty()) gridPane.getChildren().clear(); // clear previous contents
         iws.setDefaultExtension(UserDataManager.getDefaultImageFormat()); // update changes
         iws.setA3Output(UserDataManager.isA3Output()); // update changes
         if(newWrapper.getCertificateFields().size() > 0) {
@@ -164,6 +168,7 @@ class CreateCertificateDialog extends Stage {
             scene.setRoot(gridPane);
             setScene(scene);
             sizeToScene();
+            setResizable(false);
             show();
 //            populatingProgress.addListener(new ChangeListener<Number>() {
 //                @Override
@@ -187,7 +192,7 @@ class CreateCertificateDialog extends Stage {
         savePathField.setOnKeyPressed(actionTraverse);
         savePathField.setPrefWidth(FIELD_WIDTH);
         Button savePathBtn = new Button("Browse...");
-        savePathBtn.setOnKeyPressed(actionTraverse);
+//        savePathBtn.setOnKeyPressed(actionTraverse); // not necessary
         
         gridPane.add(savePathLabel, 0, 0); // col, rows
         gridPane.add(savePathField, 1, 0);
@@ -210,7 +215,7 @@ class CreateCertificateDialog extends Stage {
             if(certificateField.getFieldType() == FieldType.IMAGE) {
                 TextField tf = (TextField) node;
                 Button browseButton = getBrowseButton(tf);
-                browseButton.setOnKeyPressed(actionTraverse);
+//                browseButton.setOnKeyPressed(actionTraverse); // bugsification
                 gridPane.add(browseButton, 2, row);
             }
             gridPane.add(node, 1, row);
@@ -321,7 +326,7 @@ class CreateCertificateDialog extends Stage {
             @Override
             public void handle(KeyEvent t) {
                 if(t.getCode() == KeyCode.ENTER) {
-                    Debugger.log("KeyCode.ENTER : Textfield traverse");
+                    Debugger.log("[CreateCertificateDialog] KeyCode.ENTER : Textfield traverse"); // debug
                     Node n = (Node) t.getSource();
                     n.impl_traverse(Direction.NEXT);
                 }
@@ -344,7 +349,10 @@ class CreateCertificateDialog extends Stage {
     private boolean isFieldsFilled() {
         boolean filled = true;
         Debugger.log("[CreateCertificateDialog] Data holder size : " + dataHolders.size()); // debug
+        int index = 0;
+        ObservableList<CertificateField> fields = (ObservableList<CertificateField>) wrapper.getCertificateFields();
         for(Node node : dataHolders) {
+            CertificateField field = fields.get(index);
             if(node instanceof TextField) {
                 TextField tf = (TextField) node;
                 if("".equalsIgnoreCase(tf.getText())) {
@@ -352,12 +360,16 @@ class CreateCertificateDialog extends Stage {
                     Debugger.log("textfield not filled : " + tf + "," + tf.getText()) ;
                 }
             } else if(node instanceof ComboBox) {
-                ComboBox<String> box = (ComboBox<String>) node;
-                if("".equalsIgnoreCase(box.getSelectionModel().getSelectedItem())) {
-                    filled = false;
-                    Debugger.log("combobox not filled : " + box + "," + box.getSelectionModel().getSelectedItem());
+                // filter TEXT combobox no being filled
+                if(field.getFieldType() == FieldType.TEXT) { // new fix
+                    ComboBox<String> box = (ComboBox<String>) node;
+                    if("".equalsIgnoreCase(box.getSelectionModel().getSelectedItem())) {
+                        filled = false;
+                        Debugger.log("combobox not filled : " + box + "," + box.getSelectionModel().getSelectedItem());
+                    }
                 }
             }
+            index++;
         }
         return filled;
     }
@@ -418,6 +430,11 @@ class CreateCertificateDialog extends Stage {
         };
     }
     
+    /**
+     * creates a suitable label object for the certificateField
+     * @param certificateField
+     * @return 
+     */
     private Label getSuitableLabel(CertificateField certificateField) {
         Label label = new Label();
         if(certificateField.getFieldType() == FieldType.TEXT || certificateField.getFieldType() == FieldType.ARRAY) {
@@ -433,6 +450,12 @@ class CreateCertificateDialog extends Stage {
         return label;
     }
     
+    /**
+     * creates a suitable node according to the certificateField for
+     * add to the right side of the dialog.
+     * @param certificateField
+     * @return TextField or ComboBox
+     */
     private Node getSuitableComponent(CertificateField certificateField) {
         if (certificateField.getFieldType() == FieldType.IMAGE) {
             TextField avatarPathField = new TextField();

@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2012-2015 BCZ Inc.
  * This file is part of Certificate Maker.
  *
  * Certificate Maker is free software: you can redistribute it and/or modify
@@ -241,10 +242,13 @@ class LabelDialog extends Stage {
         repeatCheckBox = new CheckBox();
         fontFamilyBox = new ComboBox(window.getFontFamilyList());
         fontFamilyBox.getSelectionModel().select(0);
+//        fontFamilyBox.setOnKeyPressed(escaction); // esc key close fix
         fontSizeBox = new ComboBox(window.getFontSizeList());
         fontSizeBox.getSelectionModel().select(5);
+//        fontSizeBox.setOnKeyPressed(escaction); // esc key close fix
         fontStyleBox = new ComboBox(window.getFontStyleList());
         fontStyleBox.getSelectionModel().select(0);
+//        fontStyleBox.setOnKeyPressed(escaction); // esc key close fix
         
         // params : col, row, colspan, rowspan
         gridPane.add(asklabel, 0, 0, 2, 1); // 1 row
@@ -365,6 +369,7 @@ class LabelDialog extends Stage {
         fieldTypeBox.setDisable(false);
         button.setOnAction(newOkAction);
         sizeToScene();
+        setResizable(false);
         show();
     }
 
@@ -394,6 +399,7 @@ class LabelDialog extends Stage {
         fieldTypeBox.setDisable(true);
         button.setOnAction(editOkAction);
         sizeToScene();
+        setResizable(false);
         show();
     }
 
